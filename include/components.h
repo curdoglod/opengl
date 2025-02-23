@@ -1,0 +1,9 @@
+#pragma once
+#include "object.h"
+#include "component.h"
+#include "button.h"
+#include "rigidbody.h"
+#include "sprite.h"
+#include "image.h"
+#include "text.h" 
+#include "snake.h" 
