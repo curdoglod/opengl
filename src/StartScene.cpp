@@ -6,7 +6,15 @@ void StartScene::Awake()
 
 void StartScene::Init()
 {
+    Object* my3DObject = CreateObject();
+    // Добавляем компонент 3D‑модели (FBX/OBJ/etc.)
+    my3DObject->AddComponent(new Model3DComponent("Assets/model.fbx"));
 
+    // Позиционируем, задаём «размер» (масштаб)
+    my3DObject->SetPosition(Vector3(0, 0, 0));
+    my3DObject->SetSize(Vector2(1, 1)); // масштаб 1:1
+    my3DObject->SetRotation(Vector3(40,40,0)); 
+    my3DObject->SetLayer(100); 
     Vector2 windowSize(800, 480);
     SetWindowSize(windowSize.x, windowSize.y);
     glViewport(0, 0, windowSize.x, windowSize.y);

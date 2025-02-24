@@ -292,7 +292,7 @@ void TextComponent::Update(float dt)
         return;
 
     // Для простоты возьмём позицию и угол из object (как у вас в коде)
-    float angle = object->GetAngle();
+    float angle = object->GetAngle().z;
     Vector2 pos = object->GetPosition();
     Vector2 size = object->GetSize(); // Обычно вы используете это для фона и т.д.
 

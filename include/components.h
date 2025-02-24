@@ -7,3 +7,4 @@
 #include "image.h"
 #include "text.h" 
 #include "snake.h" 
+#include "Model3DComponent.h" 

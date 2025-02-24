@@ -183,7 +183,7 @@ void Sprite::draw(const Vector2& pos, float angle) {
     posX = static_cast<int>(pos.x);
     posY = static_cast<int>(pos.y);
     rotation = angle;
-
+    //glDisable(GL_DEPTH_TEST);
     glUseProgram(shaderProgram);
 
     // Создаём матрицу модели: перевод, поворот (вокруг центра) и масштабирование

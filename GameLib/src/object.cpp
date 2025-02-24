@@ -31,15 +31,28 @@ bool Object::Crossing(Object *obj)
 
 Vector2 Object::GetPosition() const
 {
+	return position.toVector2();
+}
+Vector3 Object::GetPosition3D() const
+{
 	return position;
 }
-
 void Object::SetPosition(const Vector2 &vec2)
 {
-	position = vec2;
+	position.x = vec2.x;
+	position.y = vec2.y;
+}
+
+void Object::SetPosition(const Vector3 &vec3)
+{
+	position = vec3;
 }
 
 void Object::SetRotation(float angle)
+{
+	this->angle.z = angle;
+}
+void Object::SetRotation(const Vector3& angle)
 {
 	this->angle = angle;
 }
@@ -68,6 +81,12 @@ void Object::InitSize(Image *img)
 	if (img != nullptr)
 		size = img->GetSize();
 }
+
+void Object::SetSize(const Vector2 &vec2)
+{
+	size = vec2;
+}
+
 void Object::InitSize()
 {
 	Image *img = GetComponent<Image>();

@@ -18,10 +18,13 @@ public:
     bool Crossing(Object* obj, const float& x_range, const float& y_range);
     bool Crossing(Object* obj);
     Vector2 GetPosition() const;
-    float GetAngle() const {return angle; }; 
+    Vector3 GetPosition3D() const;
+    Vector3 GetAngle() const {return angle; }; 
     void SetPosition(const Vector2& vec2);
+    void SetPosition(const Vector3 &vec3);
     void SetRotation(float angle);
-
+    void SetRotation(const Vector3& angle);
+    void SetSize(const Vector2& vec2); 
     void SetPositionOnPlatform(const Vector2 & vec2);
     void MoveY(const float& pos_y);
     void MoveX(const float& pos_x);
@@ -57,9 +60,9 @@ private:
     SDL_Renderer* renderer;
     SceneManager* currentScene;
     std::vector<Component*> components;
-    Vector2 position;
+    Vector3 position;
     Vector2 size;
-    float angle; 
+    Vector3 angle; 
     int layer;
     bool active; 
     float deltatime;

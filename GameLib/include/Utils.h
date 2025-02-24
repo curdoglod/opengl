@@ -380,3 +380,101 @@ struct Vector2 {
 		return os;
 	}
 };
+
+
+struct Vector3 {
+    float x, y, z;
+
+    Vector3() : x(0), y(0), z(0) {}
+    Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
+
+    float length() const {
+        return std::sqrt(x * x + y * y + z * z);
+    }
+
+    Vector3 operator+(const Vector3& other) const {
+        return Vector3(x + other.x, y + other.y, z + other.z);
+    }
+
+    Vector3& operator+=(const Vector3& other) {
+        x += other.x;
+        y += other.y;
+        z += other.z;
+        return *this;
+    }
+
+    Vector3 operator-(const Vector3& other) const {
+        return Vector3(x - other.x, y - other.y, z - other.z);
+    }
+
+    Vector3& operator-=(const Vector3& other) {
+        x -= other.x;
+        y -= other.y;
+        z -= other.z;
+        return *this;
+    }
+
+    template<typename U>
+    Vector3& operator+=(const U& scalar) {
+        x += scalar;
+        y += scalar;
+        z += scalar;
+        return *this;
+    }
+
+    template<typename U>
+    Vector3& operator-=(const U& scalar) {
+        x -= scalar;
+        y -= scalar;
+        z -= scalar;
+        return *this;
+    }
+
+    template<typename U>
+    Vector3& operator*=(const U& scalar) {
+        x *= scalar;
+        y *= scalar;
+        z *= scalar;
+        return *this;
+    }
+
+    template<typename U>
+    Vector3& operator/=(const U& scalar) {
+        x /= scalar;
+        y /= scalar;
+        z /= scalar;
+        return *this;
+    }
+
+    template<typename U>
+    Vector3 operator*(const U& scalar) const {
+        return Vector3(x * scalar, y * scalar, z * scalar);
+    }
+
+    template<typename U>
+    Vector3 operator/(const U& scalar) const {
+        return Vector3(x / scalar, y / scalar, z / scalar);
+    }
+
+    Vector3& operator=(const Vector3& other) {
+        if (this == &other)
+            return *this;
+        x = other.x;
+        y = other.y;
+        z = other.z;
+        return *this;
+    }
+
+    bool operator==(const Vector3& other) const {
+        return (x == other.x && y == other.y && z == other.z);
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const Vector3& vec) {
+        os << '(' << vec.x << ", " << vec.y << ", " << vec.z << ')';
+        return os;
+    }
+
+	Vector2 toVector2() const {
+        return Vector2(x, y);
+    }
+};
