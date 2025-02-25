@@ -1,18 +1,25 @@
-#ifndef MODEL3D_COMPONENT_H
-#define MODEL3D_COMPONENT_H
-
+#pragma once
 #include "component.h"
 #include <string>
 #include <vector>
-#include <glm/glm.hpp>
 #include <GL/glew.h>
+#include <glm/glm.hpp>
+#include <assimp/scene.h>
 
-// Вспомогательные структуры
+// Структура для хранения текстуры
+struct Texture {
+    GLuint id;
+    std::string type;
+    std::string path;
+};
+
+// Для каждого меша
 struct MeshEntry {
     GLuint VAO;
     GLuint VBO;
     GLuint EBO;
     unsigned int numIndices;
+    std::vector<Texture> textures;
 };
 
 class Model3DComponent : public Component
@@ -26,12 +33,12 @@ public:
     virtual void Init() override;   // Загрузка модели (через Assimp)
     virtual void Update(float dt) override; // Рендер модели
 
-    // Можно добавить сеттеры/геттеры для материала, шейдера и т.д.
-
 private:
     bool loadModel(const std::string& path);
     void processNode(struct aiNode* node, const struct aiScene* scene);
     void processMesh(struct aiMesh* mesh, const struct aiScene* scene);
+    std::vector<Texture> loadMaterialTextures(struct aiMaterial* mat, aiTextureType type, const std::string& typeName);
+    GLuint TextureFromFile(const char* path, const std::string& directory);
 
     // Создаём шейдерную программу
     static GLuint shaderProgram;
@@ -39,11 +46,8 @@ private:
 
 private:
     std::string modelPath;
+    std::string directory; // директория модели
     std::vector<MeshEntry> meshes;
-
-    // Параметры для трансформации/камеры (можно расширить)
-    // Вы можете использовать шейдер, как в Sprite/TextComponent,
-    // или иметь отдельные шейдеры для 3D
+    std::vector<Texture> loadedTextures; // для предотвращения повторной загрузки текстур
 };
 
-#endif // MODEL3D_COMPONENT_H

@@ -287,6 +287,7 @@ void TextComponent::setAlignment(TextAlignment newAlignment)
 // ============================ Update (рендер) ============================
 void TextComponent::Update(float dt)
 {
+    glDisable(GL_DEPTH_TEST);
     // Если нет текстуры или VAO — нечего рисовать
     if (!textureID || !VAO)
         return;

@@ -27,7 +27,8 @@ struct Engine::Impl
             std::cerr << "Ошибка инициализации GLEW!" << std::endl;
             // обработка ошибки
         }
-
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
           glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
@@ -50,6 +51,7 @@ struct Engine::Impl
 
         // SDL_SetRenderDrawColor(m_renderer, 0, 100, 255, 255);
         // SDL_RenderClear(m_renderer);
+        
         glClearColor(0, 100 / 255.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         if (currentScene != nullptr)

@@ -6,18 +6,23 @@ void StartScene::Awake()
 
 void StartScene::Init()
 {
-    Object* my3DObject = CreateObject();
+    my3DObject = CreateObject();
     // Добавляем компонент 3D‑модели (FBX/OBJ/etc.)
     my3DObject->AddComponent(new Model3DComponent("Assets/model.fbx"));
 
     // Позиционируем, задаём «размер» (масштаб)
-    my3DObject->SetPosition(Vector3(0, 0, 0));
+    my3DObject->SetPosition(Vector3(50, 10, 100));
     my3DObject->SetSize(Vector2(1, 1)); // масштаб 1:1
-    my3DObject->SetRotation(Vector3(40,40,0)); 
-    my3DObject->SetLayer(100); 
+    my3DObject->SetRotation(Vector3(-90,0,0)); 
+    my3DObject->SetLayer(200); 
     Vector2 windowSize(800, 480);
     SetWindowSize(windowSize.x, windowSize.y);
     glViewport(0, 0, windowSize.x, windowSize.y);
+    UIdraw();
+}
+void StartScene::UIdraw()
+{
+    Vector2 windowSize(800, 480);
 
     Object *background = CreateObject();
     background->AddComponent(new Image(Engine::GetResourcesArchive()->GetFile("block_sgreen.png")));
@@ -35,4 +40,8 @@ void StartScene::Init()
     startPaddleGame_button->GetComponent<ButtonComponent>()->SetOnClick([this]()
                                                                         { SwitchToScene(new MainGameScene()); });
     startPaddleGame_button->GetComponent<TextComponent>()->setText("Arkanoid Game");
+}
+void StartScene::Update()
+{
+    my3DObject->SetRotation(my3DObject->GetAngle()+Vector3(1,1,1)); 
 }

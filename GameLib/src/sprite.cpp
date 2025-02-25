@@ -179,6 +179,7 @@ void Sprite::draw() {
 }
 
 void Sprite::draw(const Vector2& pos, float angle) {
+    glDisable(GL_DEPTH_TEST);
     // Обновляем позицию и угол
     posX = static_cast<int>(pos.x);
     posY = static_cast<int>(pos.y);
