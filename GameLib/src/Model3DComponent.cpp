@@ -8,6 +8,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <iostream>
+#include <limits>
 
 // ==================== Шейдеры (Lambert lighting) ====================
 static const char* vertexShaderSource = R"(
@@ -123,7 +124,10 @@ GLuint Model3DComponent::loadShaderProgram()
 
 // ==================== Конструктор/Деструктор ====================
 Model3DComponent::Model3DComponent(const std::string& modelPath)
-    : modelPath(modelPath)
+    : modelPath(modelPath),
+      boundingBoxCalculated(false),
+      modelMin(std::numeric_limits<float>::max()),
+      modelMax(std::numeric_limits<float>::lowest())
 {
 }
 
@@ -261,6 +265,15 @@ void Model3DComponent::processMesh(aiMesh* mesh, const aiScene* scene)
     // Порядок: (позиция x,y,z) + (нормаль x,y,z) + (UV x,y)
     // Итого 8 float на вершину
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+        // Обновляем AABB (Axis-Aligned Bounding Box)
+        glm::vec3 vertex(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
+        modelMin.x = std::min(modelMin.x, vertex.x);
+        modelMin.y = std::min(modelMin.y, vertex.y);
+        modelMin.z = std::min(modelMin.z, vertex.z);
+        modelMax.x = std::max(modelMax.x, vertex.x);
+        modelMax.y = std::max(modelMax.y, vertex.y);
+        modelMax.z = std::max(modelMax.z, vertex.z);
+        
         // Позиция
         vertices.push_back(mesh->mVertices[i].x);
         vertices.push_back(mesh->mVertices[i].y);
@@ -338,6 +351,9 @@ void Model3DComponent::processMesh(aiMesh* mesh, const aiScene* scene)
     }
 
     meshes.push_back(entry);
+
+    // Устанавливаем флаг, что граничный ящик рассчитан
+    boundingBoxCalculated = true;
 }
 
 std::vector<Texture> Model3DComponent::loadMaterialTextures(aiMaterial* mat, aiTextureType type, const std::string& typeName)
@@ -397,4 +413,26 @@ GLuint Model3DComponent::TextureFromFile(const char* path, const std::string& di
     glBindTexture(GL_TEXTURE_2D, 0);
 
     return textureID;
+}
+
+// Метод для получения размеров модели
+Vector3 Model3DComponent::GetModelDimensions() const
+{
+    if (!boundingBoxCalculated) {
+        // Возвращаем единичный куб, если модель ещё не загружена
+        return Vector3(1.0f, 1.0f, 1.0f);
+    }
+    
+    // Вычисляем размеры (ширина, высота, глубина)
+    float width = modelMax.x - modelMin.x;
+    float height = modelMax.y - modelMin.y;
+    float depth = modelMax.z - modelMin.z;
+    
+    // Безопасный случай: если размер близок к нулю, устанавливаем его равным небольшому значению
+    const float minSize = 0.1f;
+    width = std::max(width, minSize);
+    height = std::max(height, minSize);
+    depth = std::max(depth, minSize);
+    
+    return Vector3(width, height, depth);
 }

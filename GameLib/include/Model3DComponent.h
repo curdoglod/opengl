@@ -32,6 +32,9 @@ public:
     // Переопределяем методы Component
     virtual void Init() override;   // Загрузка модели (через Assimp)
     virtual void Update(float dt) override; // Рендер модели
+    
+    // Получение размеров модели (AABB)
+    Vector3 GetModelDimensions() const;
 
 private:
     bool loadModel(const std::string& path);
@@ -49,5 +52,10 @@ private:
     std::string directory; // директория модели
     std::vector<MeshEntry> meshes;
     std::vector<Texture> loadedTextures; // для предотвращения повторной загрузки текстур
+    
+    // Переменные для хранения AABB модели
+    glm::vec3 modelMin;
+    glm::vec3 modelMax;
+    bool boundingBoxCalculated;
 };
 

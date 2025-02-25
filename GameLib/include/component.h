@@ -32,6 +32,9 @@ public:
 
     virtual Component* Clone() const { return nullptr; }
    
+    // Получение объекта, к которому прикреплен компонент
+    Object* GetOwner() const { return object; }
+   
 protected:
     Object* object = nullptr;
     Object* CreateObject()
@@ -42,6 +45,7 @@ protected:
     }
 private:
     friend class Object; 
+    friend class CollisionManager; // Добавляем доступ для CollisionManager
     void setOwner(Object* owner) {
         object = owner;
     }
