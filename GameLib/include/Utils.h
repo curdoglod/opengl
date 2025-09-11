@@ -288,6 +288,7 @@ enum class Key
 	OEMClear = 0xFE, //OEM Clear key
 };
 
+struct Vector3;
 
 struct Vector2 {
 	float x, y;
@@ -379,6 +380,8 @@ struct Vector2 {
 		os << '(' << vec.x << ", " << vec.y << ')';
 		return os;
 	}
+
+	Vector3 toVector3() const;
 };
 
 
@@ -478,3 +481,7 @@ struct Vector3 {
         return Vector2(x, y);
     }
 };
+
+inline Vector3 Vector2::toVector3() const {
+    return Vector3(x, y, 0);
+}

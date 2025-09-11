@@ -11,7 +11,8 @@ endif
 
 LIB_NAME = libGameLib.a
 SRC = $(wildcard src/*.cpp)
-OBJ = $(SRC:.cpp=.o)
+OBJDIR = obj
+OBJ = $(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))
 AR = ar rcs
 
 .PHONY: all clean
@@ -21,8 +22,12 @@ all: $(LIB_NAME)
 $(LIB_NAME): $(OBJ)
 	$(AR) $@ $^
 
-%.o: %.cpp
+$(OBJDIR)/%.o: src/%.cpp | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
 clean:
-	rm -f src/*.o $(LIB_NAME)
+	rm -f $(OBJDIR)/*.o $(LIB_NAME)
+	rm -rf $(OBJDIR)

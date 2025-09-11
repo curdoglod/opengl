@@ -4,12 +4,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-// Инициализация статического члена (шейдерная программа)
 GLuint Sprite::shaderProgram = 0;
 
-//
-// Шейдеры (вершинный и фрагментный)
-//
+
 static const char* vertexShaderSource = R"(
 #version 330 core
 layout (location = 0) in vec2 aPos;
@@ -41,7 +38,6 @@ void main()
 }
 )";
 
-// Вспомогательная функция для компиляции шейдера
 static GLuint compileShader(GLenum type, const char* source) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, nullptr);
@@ -51,12 +47,11 @@ static GLuint compileShader(GLenum type, const char* source) {
     if (!success) {
         char infoLog[512];
         glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        std::cerr << "Ошибка компиляции шейдера: " << infoLog << std::endl;
+        std::cerr << "Shader compilation error: " << infoLog << std::endl;
     }
     return shader;
 }
 
-// Загружает и линкует шейдерную программу
 GLuint Sprite::loadShaderProgram() {
     GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
     GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
@@ -70,23 +65,20 @@ GLuint Sprite::loadShaderProgram() {
     if (!success) {
         char infoLog[512];
         glGetProgramInfoLog(program, 512, nullptr, infoLog);
-        std::cerr << "Ошибка линковки шейдерной программы: " << infoLog << std::endl;
+        std::cerr << "Shader program link error: " << infoLog << std::endl;
     }
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
     return program;
 }
 
-//
-// Конструктор и деструктор
-//
 Sprite::Sprite(const std::vector<unsigned char>& imageData)
     : textureID(0), VAO(0), VBO(0), EBO(0),
       width(0), height(0), posX(0), posY(0), rotation(0.0f),
       r(1.0f), g(1.0f), b(1.0f), a(1.0f)
 {
     if (!loadTextureFromMemory(imageData)) {
-        std::cerr << "Не удалось загрузить текстуру спрайта." << std::endl;
+        std::cerr << "Failed to load sprite texture." << std::endl;
     }
     initRenderData();
     if (shaderProgram == 0) {
@@ -101,9 +93,7 @@ Sprite::~Sprite() {
     glDeleteBuffers(1, &EBO);
 }
 
-//
-// Загрузка текстуры
-//
+
 bool Sprite::loadTextureFromMemory(const std::vector<unsigned char>& imageData) {
     SDL_RWops* rw = SDL_RWFromConstMem(imageData.data(), imageData.size());
     if (!rw) {
@@ -134,17 +124,15 @@ bool Sprite::loadTextureFromMemory(const std::vector<unsigned char>& imageData) 
     return true;
 }
 
-//
-// Инициализация геометрии спрайта (прямоугольника)
-//
+
 void Sprite::initRenderData() {
-    // Определяем координаты вершин и текстурные координаты для прямоугольника (quad)
+    // Define vertex positions and texture coordinates for a rectangle (quad)
     float vertices[] = {
-        // Позиция    // Текстурные координаты
-        0.0f, 1.0f,   0.0f, 1.0f,  // Нижний левый
-        1.0f, 1.0f,   1.0f, 1.0f,  // Нижний правый
-        1.0f, 0.0f,   1.0f, 0.0f,  // Верхний правый
-        0.0f, 0.0f,   0.0f, 0.0f   // Верхний левый
+        // Position   // Texture coordinates
+        0.0f, 1.0f,   0.0f, 1.0f,  // bottom-left
+        1.0f, 1.0f,   1.0f, 1.0f,  // bottom-right
+        1.0f, 0.0f,   1.0f, 0.0f,  // top-right
+        0.0f, 0.0f,   0.0f, 0.0f   // top-left
     };
 
     unsigned int indices[] = {
@@ -161,33 +149,33 @@ void Sprite::initRenderData() {
       glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
       glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-      // Позиция (2 компоненты)
+      // Position (2 components)
       glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
       glEnableVertexAttribArray(0);
-      // Текстурные координаты (2 компоненты)
+      // Texture coordinates (2 components)
       glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
       glEnableVertexAttribArray(1);
     glBindVertexArray(0);
 }
 
 //
-// Отрисовка
+// Rendering
 //
 void Sprite::draw() {
-    // Отрисовка с использованием внутренних координат и угла
+    // Render using internal position and angle
     draw(Vector2(static_cast<float>(posX), static_cast<float>(posY)), rotation);
 }
 
 void Sprite::draw(const Vector2& pos, float angle) {
     glDisable(GL_DEPTH_TEST);
-    // Обновляем позицию и угол
+    // Update position and angle
     posX = static_cast<int>(pos.x);
     posY = static_cast<int>(pos.y);
     rotation = angle;
     //glDisable(GL_DEPTH_TEST);
     glUseProgram(shaderProgram);
 
-    // Создаём матрицу модели: перевод, поворот (вокруг центра) и масштабирование
+    // Build model matrix: translate, rotate around center, and scale
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(pos.x, pos.y, 0.0f));
     model = glm::translate(model, glm::vec3(width * 0.5f, height * 0.5f, 0.0f));
@@ -195,8 +183,8 @@ void Sprite::draw(const Vector2& pos, float angle) {
     model = glm::translate(model, glm::vec3(-width * 0.5f, -height * 0.5f, 0.0f));
     model = glm::scale(model, glm::vec3(width, height, 1.0f));
 
-    // Создаём ортографическую проекцию
-    // Здесь предполагается, что окно имеет размер 1280x720. При необходимости можно передавать реальные размеры.
+    // Create orthographic projection
+    // Window assumed to be 800x480; adjust as needed.
     glm::mat4 projection = glm::ortho(0.0f, 800.0f, 480.0f, 0.0f, -1.0f, 1.0f);
     
     GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -204,24 +192,24 @@ void Sprite::draw(const Vector2& pos, float angle) {
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-    // Устанавливаем цвет и прозрачность спрайта
+    // Set sprite color and opacity
     GLint colorLoc = glGetUniformLocation(shaderProgram, "spriteColor");
     glUniform4f(colorLoc, r, g, b, a);
 
-    // Привязываем текстуру
+    // Bind texture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureID);
     GLint texLoc = glGetUniformLocation(shaderProgram, "spriteTexture");
     glUniform1i(texLoc, 0);
 
-    // Отрисовываем прямоугольник
+    // Draw quad
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
 
 //
-// Сеттеры и геттеры
+// Setters and getters
 //
 void Sprite::setPosition(int x, int y) {
     posX = x;

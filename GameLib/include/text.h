@@ -9,7 +9,6 @@
 #include <vector>
 #include "color.h"
 
-// Простейшее выравнивание
 enum class TextAlignment {
     LEFT,
     CENTER,
@@ -33,20 +32,19 @@ public:
     void setColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255) { setColor(Color(r, g, b, a)); }
     void setAlignment(TextAlignment newAlignment);
 
-    virtual void Init() override;       // Инициализация (загрузка шрифта, создание текстуры)
-    virtual void Update(float dt) override; // Рендер текста
+    virtual void Init() override;       
+    virtual void Update(float dt) override; 
 
-    // Клонирование компонента (если нужно)
     virtual TextComponent* Clone() const override {
         return new TextComponent(fontSize, text, color, alignment);
     }
 
 private:
     bool createTextureFromSurface(SDL_Surface* surface);
-    void updateTexture();     // Пересоздаёт текстуру из текущего текста
-    void initRenderData();    // Создаёт VAO/VBO/EBO для рендеринга
+    void updateTexture();     
+    void initRenderData();    
 
-    // Шейдерная программа (можно сделать общую для спрайтов/текста)
+   
     static GLuint shaderProgram;
     static GLuint loadShaderProgram();
 
@@ -56,16 +54,16 @@ private:
     Color color;
     TextAlignment alignment;
 
-    // Данные о шрифте
+    
     TTF_Font* font;
     std::vector<unsigned char> fontDataBuffer;
 
-    // Данные о созданной текстуре
+    
     GLuint textureID;
     int textWidth;
     int textHeight;
 
-    // VAO/VBO/EBO для рендеринга квадрата
+    
     GLuint VAO, VBO, EBO;
 };
 

@@ -24,8 +24,8 @@ struct Engine::Impl
         glewExperimental = GL_TRUE;
         if (glewInit() != GLEW_OK)
         {
-            std::cerr << "Ошибка инициализации GLEW!" << std::endl;
-            // обработка ошибки
+            std::cerr << "GLEW initialization error!" << std::endl;
+            // error handling
         }
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LESS);

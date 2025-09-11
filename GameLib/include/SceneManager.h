@@ -131,6 +131,9 @@ public:
    virtual void onKeyReleased(SDL_Keycode key) {}
 
 
+   // Expose read-only view of objects for systems like CameraComponent
+   const std::vector<Object*>& GetObjects() const { return objects; }
+
 private: 
     std::vector<Object*> objects;
     SDL_Renderer* m_renderer;

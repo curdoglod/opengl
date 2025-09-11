@@ -25,11 +25,13 @@ public:
     void SetRotation(float angle);
     void SetRotation(const Vector3& angle);
     void SetSize(const Vector2& vec2); 
+    void SetSize(const Vector3& vec3);
     void SetPositionOnPlatform(const Vector2 & vec2);
     void MoveY(const float& pos_y);
     void MoveX(const float& pos_x);
 
     Vector2 GetSize();
+    Vector3 GetSize3D() const { return size; }
     void InitSize(Image* img);
     void InitSize();
     void SetLayer(int layer);
@@ -61,7 +63,7 @@ private:
     SceneManager* currentScene;
     std::vector<Component*> components;
     Vector3 position;
-    Vector2 size;
+    Vector3 size;
     Vector3 angle; 
     int layer;
     bool active; 

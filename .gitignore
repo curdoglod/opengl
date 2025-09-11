@@ -1,3 +1,12 @@
 /.DS_Store
 /.idea
 /.vscode
+
+# Executable
+game
+
+# Object files
+*.o
+
+# Archive files
+*.a

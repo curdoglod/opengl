@@ -73,25 +73,30 @@ void Object::MoveX(const float &pos_x)
 
 Vector2 Object::GetSize()
 {
-	return size;
+	return size.toVector2();
 }
 
 void Object::InitSize(Image *img)
 {
 	if (img != nullptr)
-		size = img->GetSize();
+		size = img->GetSize().toVector3();
 }
 
 void Object::SetSize(const Vector2 &vec2)
 {
-	size = vec2;
+	size = vec2.toVector3();
+}
+
+void Object::SetSize(const Vector3 &vec3)
+{
+	size = vec3;
 }
 
 void Object::InitSize()
 {
 	Image *img = GetComponent<Image>();
 	if (img != nullptr)
-		size = img->GetSize();
+		size = img->GetSize().toVector3();
 }
 
 void Object::SetLayer(int newLayer)

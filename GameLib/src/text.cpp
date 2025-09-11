@@ -3,10 +3,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
-#include "engine.h" // Предполагается, что здесь есть GetDefaultArchive()
-#include "Utils.h"  // Если нужен ваш Vector2, Color и т.д.
+#include "engine.h" // Assumes GetDefaultArchive() is available here
+#include "Utils.h"  // If you need your Vector2, Color, etc.
 
-// ============================ Шейдеры ============================
+// ============================ Shaders ============================
 static const char *vertexShaderSource = R"(
 #version 330 core
 layout (location = 0) in vec2 aPos;
@@ -35,17 +35,17 @@ uniform vec4 textColor;
 
 void main()
 {
-    // Берём цвет пикселя из текстуры
+    // Sample pixel color from texture
     vec4 sampled = texture(textTexture, TexCoord);
-    // Умножаем на textColor (можно регулировать прозрачность и т.д.)
+    // Multiply by textColor (can control opacity, etc.)
     FragColor = sampled * textColor;
 }
 )";
 
-// Статический член класса
+// Static class member
 GLuint TextComponent::shaderProgram = 0;
 
-// Вспомогательная функция для компиляции шейдера
+// Helper function to compile shader
 static GLuint compileShader(GLenum type, const char *source)
 {
     GLuint shader = glCreateShader(type);
@@ -58,12 +58,12 @@ static GLuint compileShader(GLenum type, const char *source)
     {
         char infoLog[512];
         glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        std::cerr << "Ошибка компиляции шейдера: " << infoLog << std::endl;
+        std::cerr << "Shader compilation error: " << infoLog << std::endl;
     }
     return shader;
 }
 
-// Линкует шейдерную программу
+// Link shader program
 GLuint TextComponent::loadShaderProgram()
 {
     GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
@@ -80,7 +80,7 @@ GLuint TextComponent::loadShaderProgram()
     {
         char infoLog[512];
         glGetProgramInfoLog(program, 512, nullptr, infoLog);
-        std::cerr << "Ошибка линковки шейдерной программы: " << infoLog << std::endl;
+        std::cerr << "Shader program link error: " << infoLog << std::endl;
     }
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
@@ -88,7 +88,7 @@ GLuint TextComponent::loadShaderProgram()
     return program;
 }
 
-// ============================ Конструктор/деструктор ============================
+// ============================ Constructor/Destructor ============================
 TextComponent::TextComponent(int fontSize, const std::string &text, const Color &color, TextAlignment align)
     : fontSize(fontSize), text(text), color(color), alignment(align), font(nullptr), textureID(0), textWidth(0), textHeight(0), VAO(0), VBO(0), EBO(0)
 {
@@ -115,46 +115,46 @@ TextComponent::~TextComponent()
     }
 }
 
-// ============================ Инициализация ============================
+// ============================ Initialization ============================
 void TextComponent::Init()
 {
-    // Загрузка шрифта из DefaultArchive (по аналогии с вашим кодом)
+    // Load font from DefaultArchive
     fontDataBuffer = Engine::GetDefaultArchive()->GetFile("Roboto-Black.ttf");
     SDL_RWops *rw = SDL_RWFromConstMem(fontDataBuffer.data(), fontDataBuffer.size());
     if (!rw)
     {
-        std::cerr << "Не удалось создать SDL_RWops для шрифта" << std::endl;
+        std::cerr << "Failed to create SDL_RWops for font" << std::endl;
         return;
     }
     font = TTF_OpenFontRW(rw, 1, fontSize);
     if (!font)
     {
-        std::cerr << "Не удалось открыть шрифт: " << TTF_GetError() << std::endl;
+        std::cerr << "Failed to open font: " << TTF_GetError() << std::endl;
         return;
     }
 
-    // Создаём шейдерную программу (единожды, если 0)
+    // Create shader program (once, if 0)
     if (shaderProgram == 0)
     {
         shaderProgram = loadShaderProgram();
     }
 
-    // Создаём VAO/VBO/EBO для отрисовки (квадрат 1x1, потом масштабируем)
+    // Create VAO/VBO/EBO for rendering (1x1 quad, then scale)
     initRenderData();
 
-    // Создаём текстуру из текста
+    // Create texture from text
     updateTexture();
 }
 
 void TextComponent::initRenderData()
 {
-    // Простой квадрат (0,0) -> (1,1), потом будем масштабировать под текст
+    // Simple quad (0,0) -> (1,1), later scaled to text size
     float vertices[] = {
-        // Позиция  // Текстурные координаты
-        0.0f, 1.0f, 0.0f, 1.0f, // левый нижний
-        1.0f, 1.0f, 1.0f, 1.0f, // правый нижний
-        1.0f, 0.0f, 1.0f, 0.0f, // правый верхний
-        0.0f, 0.0f, 0.0f, 0.0f  // левый верхний
+        // Position  // TexCoords
+        0.0f, 1.0f, 0.0f, 1.0f, // bottom-left
+        1.0f, 1.0f, 1.0f, 1.0f, // bottom-right
+        1.0f, 0.0f, 1.0f, 0.0f, // top-right
+        0.0f, 0.0f, 0.0f, 0.0f  // top-left
     };
 
     unsigned int indices[] = {
@@ -173,24 +173,24 @@ void TextComponent::initRenderData()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    // Позиция
+    // Position
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
-    // Текстурные координаты
+    // Texture coordinates
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
 }
 
-// ============================ Создание текстуры из SDL_Surface ============================
+// ============================ Create OpenGL texture from SDL_Surface ============================
 bool TextComponent::createTextureFromSurface(SDL_Surface *surface)
 {
     if (!surface)
         return false;
 
-    // Если уже есть старая текстура — удалим
+    // Delete old texture if present
     if (textureID)
     {
         glDeleteTextures(1, &textureID);
@@ -200,32 +200,31 @@ bool TextComponent::createTextureFromSurface(SDL_Surface *surface)
     textWidth = surface->w;
     textHeight = surface->h;
 
-    // Определяем формат (часто это RGBA, если TTF_RenderText_Solid => формат может быть 8bit+colormap)
-    // Лучше использовать TTF_RenderText_Blended, чтобы получить 32bpp (RGBA)
+    // Determine format (prefer TTF_RenderText_Blended to get 32bpp RGBA)
     GLenum format = GL_RGBA;
     int bytesPerPixel = surface->format->BytesPerPixel;
     if (bytesPerPixel == 4)
     {
-        // Предположим RGBA
+        // Assume RGBA
         format = GL_RGBA;
     }
     else
     {
-        // Предположим RGB
+        // Assume RGB
         format = GL_RGB;
     }
 
-    // Создаём OpenGL-текстуру
+    // Create OpenGL texture
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
 
-    // Параметры текстуры
+    // Texture parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    // Загрузка пикселей в текстуру
+    // Upload pixels to texture
     glTexImage2D(GL_TEXTURE_2D, 0, format, textWidth, textHeight, 0, format,
                  GL_UNSIGNED_BYTE, surface->pixels);
 
@@ -234,24 +233,24 @@ bool TextComponent::createTextureFromSurface(SDL_Surface *surface)
     return true;
 }
 
-// ============================ Пересоздание текста ============================
+// ============================ Recreate text texture ============================
 void TextComponent::updateTexture()
 {
     if (!font)
         return;
 
-    // SDL_ttf иногда возвращает surface с форматом 8bpp (Indexed), лучше использовать Blended
+    // SDL_ttf may return 8bpp surface; use Blended to ensure RGBA32
     SDL_Color sdlColor = {color.r, color.g, color.b, color.a};
     SDL_Surface *surface = TTF_RenderText_Blended(font, text.c_str(), sdlColor);
     if (!surface)
     {
-        std::cerr << "Не удалось создать Surface из текста: " << TTF_GetError() << std::endl;
+        std::cerr << "Failed to create text surface: " << TTF_GetError() << std::endl;
         return;
     }
 
-    // Преобразуем в формат RGBA32 (Byte order: RGBA)
+    // Convert to RGBA32 (Byte order: RGBA)
     SDL_Surface *convSurface = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
-    SDL_FreeSurface(surface); // Исходная поверхность больше не нужна
+    SDL_FreeSurface(surface); // Original surface no longer needed
 
     if (!convSurface)
     {
@@ -259,14 +258,14 @@ void TextComponent::updateTexture()
         return;
     }
 
-    // Теперь convSurface->format->BytesPerPixel == 4, и порядок каналов RGBA
-    // Можно безопасно загрузить в OpenGL:
+    // Now convSurface->format->BytesPerPixel == 4 with RGBA channel order
+    // Safe to upload to OpenGL:
     createTextureFromSurface(convSurface);
 
     SDL_FreeSurface(convSurface);
 }
 
-// ============================ Публичные методы ============================
+// ============================ Public methods ============================
 void TextComponent::setText(const std::string &newText)
 {
     text = newText;
@@ -284,28 +283,28 @@ void TextComponent::setAlignment(TextAlignment newAlignment)
     alignment = newAlignment;
 }
 
-// ============================ Update (рендер) ============================
+// ============================ Update (render) ============================
 void TextComponent::Update(float dt)
 {
     glDisable(GL_DEPTH_TEST);
-    // Если нет текстуры или VAO — нечего рисовать
+    // Nothing to draw if texture or VAO is missing
     if (!textureID || !VAO)
         return;
 
-    // Для простоты возьмём позицию и угол из object (как у вас в коде)
+    // For simplicity, take position and angle from object
     float angle = object->GetAngle().z;
     Vector2 pos = object->GetPosition();
-    Vector2 size = object->GetSize(); // Обычно вы используете это для фона и т.д.
+    Vector2 size = object->GetSize(); // Commonly used for background etc.
 
-    // Считаем модельную матрицу
+    // Compute model matrix
     glm::mat4 model(1.0f);
 
-    // 1. Перенос в позицию
-    // Выравнивание по X:
+    // 1. Translation to position
+    // Horizontal alignment:
     switch (alignment)
     {
     case TextAlignment::LEFT:
-        // ничего дополнительно
+        // nothing extra
         break;
     case TextAlignment::CENTER:
         pos.x += (size.x * 0.5f) - (textWidth * 0.5f);
@@ -314,25 +313,25 @@ void TextComponent::Update(float dt)
         pos.x += (size.x) - textWidth;
         break;
     }
-    // По Y пусть будет по центру объекта
+    // Vertically center within object
     pos.y += (size.y * 0.5f) - (textHeight * 0.5f);
 
-    // Переносим в итоговую позицию
+    // Apply final translation
     model = glm::translate(model, glm::vec3(pos.x, pos.y, 0.0f));
 
-    // 2. Если хотите вращать текст вокруг его центра:
+    // 2. Rotate text around its center
     model = glm::translate(model, glm::vec3(textWidth * 0.5f, textHeight * 0.5f, 0.0f));
     model = glm::rotate(model, glm::radians(angle), glm::vec3(0, 0, 1));
     model = glm::translate(model, glm::vec3(-textWidth * 0.5f, -textHeight * 0.5f, 0.0f));
 
-    // 3. Масштабируем под размер текста
+    // 3. Scale to text size
     model = glm::scale(model, glm::vec3(textWidth, textHeight, 1.0f));
 
-    // Ортографическая проекция (пример)
-    // Зависит от того, какую вы используете:
+    // Orthographic projection (example)
+    // Depends on what you use:
     glm::mat4 projection = glm::ortho(0.0f, 800.0f, 480.0f, 0.0f, -1.0f, 1.0f);
 
-    // Рендер
+    // Render
     glUseProgram(shaderProgram);
 
     GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -340,22 +339,22 @@ void TextComponent::Update(float dt)
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-    // Цвет (если хотим динамически менять)
+    // Color (if changing dynamically)
     GLint colorLoc = glGetUniformLocation(shaderProgram, "textColor");
     glUniform4f(colorLoc, color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
 
-    // Привязываем текстуру
+    // Bind texture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureID);
     GLint texLoc = glGetUniformLocation(shaderProgram, "textTexture");
     glUniform1i(texLoc, 0);
 
-    // Рисуем quad
+    // Draw quad
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
-    // Отключаемся
+    // Cleanup
     glBindTexture(GL_TEXTURE_2D, 0);
     glUseProgram(0);
 }

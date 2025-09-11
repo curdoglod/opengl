@@ -13,11 +13,12 @@ TARGET = game
 LIB_NAME = GameLib/libGameLib.a
 
 SRC = $(wildcard src/*.cpp)
-OBJ = $(SRC:.cpp=.o)
+OBJDIR = obj
+OBJ = $(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))
 
 AR = ar rcs
 
-.PHONY: all clean re
+.PHONY: all clean clean_lib clean_all re re_fast re_full
 
 all: $(LIB_NAME) $(TARGET)
 
@@ -27,11 +28,24 @@ $(LIB_NAME):
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o $(TARGET) $(LIBS)
 
-%.o: %.cpp
+$(OBJDIR)/%.o: src/%.cpp | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+
 clean:
-	rm -f src/*.o $(TARGET)
+	rm -f $(OBJDIR)/*.o $(TARGET)
+	rm -rf $(OBJDIR)
+
+clean_lib:
 	cd GameLib && $(MAKE) clean
 
-re: clean all
+clean_all: clean clean_lib
+
+re_full: clean_all all
+
+re_fast: clean $(TARGET)
+
+re: re_full

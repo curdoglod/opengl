@@ -5,15 +5,14 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <assimp/scene.h>
+#include <limits>
 
-// Структура для хранения текстуры
 struct Texture {
     GLuint id;
     std::string type;
     std::string path;
 };
 
-// Для каждого меша
 struct MeshEntry {
     GLuint VAO;
     GLuint VBO;
@@ -25,13 +24,15 @@ struct MeshEntry {
 class Model3DComponent : public Component
 {
 public:
-    // Конструктор принимает путь к файлу модели (FBX, OBJ, etc.)
     Model3DComponent(const std::string& modelPath);
     virtual ~Model3DComponent();
 
-    // Переопределяем методы Component
-    virtual void Init() override;   // Загрузка модели (через Assimp)
-    virtual void Update(float dt) override; // Рендер модели
+    virtual void Init() override;   
+    virtual void Update(float dt) override; 
+
+    // Interpret Object::size as scale factors relative to imported dimensions
+    void SetSizeIsRelative(bool enabled) { sizeIsRelative = enabled; }
+    bool GetSizeIsRelative() const { return sizeIsRelative; }
 
 private:
     bool loadModel(const std::string& path);
@@ -40,14 +41,20 @@ private:
     std::vector<Texture> loadMaterialTextures(struct aiMaterial* mat, aiTextureType type, const std::string& typeName);
     GLuint TextureFromFile(const char* path, const std::string& directory);
 
-    // Создаём шейдерную программу
     static GLuint shaderProgram;
     static GLuint loadShaderProgram();
 
 private:
     std::string modelPath;
-    std::string directory; // директория модели
+    std::string directory; 
     std::vector<MeshEntry> meshes;
-    std::vector<Texture> loadedTextures; // для предотвращения повторной загрузки текстур
+    std::vector<Texture> loadedTextures;
+
+    // Axis-aligned bounding box of the imported model in model space
+    glm::vec3 aabbMin = glm::vec3( std::numeric_limits<float>::max());
+    glm::vec3 aabbMax = glm::vec3(-std::numeric_limits<float>::max());
+    bool aabbComputed = false;
+    glm::vec3 modelDims = glm::vec3(0.0f);
+    bool sizeIsRelative = true;
 };
 

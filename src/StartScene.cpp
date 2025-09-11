@@ -7,12 +7,12 @@ void StartScene::Awake()
 void StartScene::Init()
 {
     my3DObject = CreateObject();
-    // Добавляем компонент 3D‑модели (FBX/OBJ/etc.)
+    // Add 3D model component (FBX/OBJ/etc.)
     my3DObject->AddComponent(new Model3DComponent("Assets/model.fbx"));
 
-    // Позиционируем, задаём «размер» (масштаб)
+    // Set position and size (scale)
     my3DObject->SetPosition(Vector3(50, 10, 100));
-    my3DObject->SetSize(Vector2(1, 1)); // масштаб 1:1
+    //my3DObject->SetSize(Vector2(1, 1)); // scale 1:1
     my3DObject->SetRotation(Vector3(-90,0,0)); 
     my3DObject->SetLayer(200); 
     Vector2 windowSize(800, 480);
@@ -40,6 +40,12 @@ void StartScene::UIdraw()
     startPaddleGame_button->GetComponent<ButtonComponent>()->SetOnClick([this]()
                                                                         { SwitchToScene(new MainGameScene()); });
     startPaddleGame_button->GetComponent<TextComponent>()->setText("Arkanoid Game");
+
+    Object *startArkanoid3D_button = start_button->CloneObject();
+    startArkanoid3D_button->MoveY(startBttn_image->GetSize().y * 2.4f);
+    startArkanoid3D_button->GetComponent<ButtonComponent>()->SetOnClick([this]()
+                                                                        { SwitchToScene(new Arkanoid3DScene()); });
+    startArkanoid3D_button->GetComponent<TextComponent>()->setText("Arkanoid 3D");
 }
 void StartScene::Update()
 {
