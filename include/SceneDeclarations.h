@@ -4,3 +4,4 @@
 #include "GameScene.h"
 #include "CameraComponent.h"
 #include "Arkanoid3DScene.h"
+#include "MinecraftCloneScene.h"

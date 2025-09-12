@@ -25,7 +25,7 @@ void Arkanoid3DScene::Init()
     board = CreateObject();
     board->AddComponent(new Model3DComponent("Assets/board.fbx"));
     board->SetPosition(Vector3(0.0f, -1.5f, 0.0f));
-    board->SetSize(Vector3(1,1,1)/200);
+    board->SetSize(Vector3(2,1,1)/200);
     board->SetRotation(Vector3(0.0f, 90.0f, 0.0f));
     board->SetLayer(100);
     auto* boardCol = new BoxCollider3D();
@@ -34,7 +34,7 @@ void Arkanoid3DScene::Init()
 
     ball = CreateObject();
     ball->AddComponent(new Model3DComponent("Assets/ball.fbx"));
-    ball->SetPosition(Vector3(0.0f, 30.0f, 0.0f));
+    ball->SetPosition(Vector3(0.0f, 10.0f, 0.0f));
     ball->SetSize(Vector3(1.0f, 1.0f,1.0f)/100);
     ball->SetRotation(Vector3(-90.0f, 0.0f, 0.0f));
     ball->SetLayer(120);
@@ -47,11 +47,6 @@ void Arkanoid3DScene::Init()
 
 void Arkanoid3DScene::Update()
 {
-    // Shadow pass
-    if (auto* light = lightObj->GetComponent<LightComponent>()) {
-        light->RenderShadowMap(this);
-    }
-
     auto* ballCol = ball->GetComponent<BoxCollider3D>();
     auto* boardCol = board->GetComponent<BoxCollider3D>();
     auto* rb = ball->GetComponent<Rigidbody3D>();

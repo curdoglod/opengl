@@ -46,6 +46,12 @@ void StartScene::UIdraw()
     startArkanoid3D_button->GetComponent<ButtonComponent>()->SetOnClick([this]()
                                                                         { SwitchToScene(new Arkanoid3DScene()); });
     startArkanoid3D_button->GetComponent<TextComponent>()->setText("Arkanoid 3D");
+
+    Object *startMinecraftClone_button = start_button->CloneObject();
+    startMinecraftClone_button->MoveY(startBttn_image->GetSize().y * 3.6f);
+    startMinecraftClone_button->GetComponent<ButtonComponent>()->SetOnClick([this]()
+                                                                            { SwitchToScene(new MinecraftCloneScene()); });
+    startMinecraftClone_button->GetComponent<TextComponent>()->setText("Minecraft Clone");
 }
 void StartScene::Update()
 {

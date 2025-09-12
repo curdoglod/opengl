@@ -69,6 +69,16 @@ void main(){ }
     ensureShadowResources();
 }
 
+void LightComponent::Update(float dt)
+{
+    (void)dt;
+    if (!object) return;
+    SceneManager* scene = object->GetScene();
+    if (scene) {
+        RenderShadowMap(scene);
+    }
+}
+
 void LightComponent::ensureShadowResources()
 {
     if (!enableShadows) return;
