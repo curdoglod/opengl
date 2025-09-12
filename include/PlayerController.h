@@ -2,6 +2,7 @@
 #include "component.h"
 #include "Utils.h"
 #include "Model3DComponent.h"
+#include <SDL.h>
 
 class PlayerController : public Component {
 public:
@@ -15,20 +16,33 @@ public:
 	void Update(float dt) override {
 		if (!object) return;
 		Vector3 pos = object->GetPosition3D();
-		Vector3 move(0,0,0);
-		if (keyW) move.z -= 1;
-		if (keyS) move.z += 1;
-		if (keyA) move.x -= 1;
-		if (keyD) move.x += 1;
-		if (move.x != 0 || move.z != 0) {
+
+		// Movement relative to camera yaw
+		float vertical = (keyW ? 1.0f : 0.0f) + (keyS ? -1.0f : 0.0f);
+		float horizontal = (keyD ? 1.0f : 0.0f) + (keyA ? -1.0f : 0.0f);
+		if (vertical != 0.0f || horizontal != 0.0f) {
+			const float toRad = 3.1415926535f / 180.0f;
+			float cy = cosf(yaw * toRad);
+			float sy = sinf(yaw * toRad);
+			Vector3 forward(sy, 0.0f, -cy);
+			Vector3 right(cy, 0.0f,  sy);
+			Vector3 move = Vector3(
+				forward.x * vertical + right.x * horizontal,
+				0.0f,
+				forward.z * vertical + right.z * horizontal
+			);
 			float len = std::sqrt(move.x*move.x + move.z*move.z);
-			move.x /= len; move.z /= len;
-			pos.x += move.x * moveSpeed * dt;
-			pos.z += move.z * moveSpeed * dt;
-			object->SetPosition(pos);
+			if (len > 0.0001f) {
+				move.x /= len; move.z /= len;
+				pos.x += move.x * moveSpeed * dt;
+				pos.z += move.z * moveSpeed * dt;
+				object->SetPosition(pos);
+			}
 		}
+
 		if (followCamera) {
 			followCamera->SetPosition(pos + camOffset);
+			followCamera->SetRotation(Vector3(pitch, yaw, 0.0f));
 		}
 	}
 
@@ -45,10 +59,21 @@ public:
 		if (key == SDLK_d) keyD = false;
 	}
 
+	void OnMouseButtonMotion(Vector2 /*mouse_position*/) override {
+		if (!followCamera) return;
+		int dx = 0, dy = 0;
+		SDL_GetRelativeMouseState(&dx, &dy);
+		yaw   += dx * mouseSensitivity;
+		pitch += dy * mouseSensitivity;
+		if (pitch > 89.0f) pitch = 89.0f;
+		if (pitch < -89.0f) pitch = -89.0f;
+	}
+
 	// Camera follow
 	void SetCamera(Object* cam) { followCamera = cam; }
 	void SetCameraOffset(const Vector3& off) { camOffset = off; }
 	void SetMoveSpeed(float s) { moveSpeed = s; }
+	void SetMouseSensitivity(float s) { mouseSensitivity = s; }
 
 	// Visual config
 	void SetModelPath(const std::string& path) { modelPath = path; }
@@ -82,4 +107,7 @@ private:
 	Vector3 camOffset;
 	std::string modelPath;
 	Vector3 modelSize;
+	float yaw = 0.0f;
+	float pitch = 0.0f;
+	float mouseSensitivity = 0.15f;
 };

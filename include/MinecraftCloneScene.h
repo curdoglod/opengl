@@ -8,6 +8,7 @@ public:
     void Update() override;
     void onKeyReleased(SDL_Keycode key) override {
         if (key == SDLK_ESCAPE) {
+            SDL_SetRelativeMouseMode(SDL_FALSE);
             SwitchToScene(new StartScene());
         }
     }

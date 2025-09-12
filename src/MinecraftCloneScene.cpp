@@ -4,7 +4,7 @@ void MinecraftCloneScene::Init()
 {
     Vector2 windowSize(800, 480);
     SetWindowSize(windowSize.x, windowSize.y);
-
+    SDL_SetRelativeMouseMode(SDL_TRUE);
     // Camera
     Object* camObj = CreateObject();
     camObj->AddComponent(new CameraComponent());
