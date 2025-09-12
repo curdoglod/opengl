@@ -18,18 +18,18 @@ void MinecraftCloneScene::Init()
     light->SetColor(glm::vec3(1.0f, 1.0f, 1.0f));
     light->SetAmbient(glm::vec3(0.25f, 0.25f, 0.25f));
     light->SetShadowEnabled(true);
-    light->SetShadowMapSize(2048, 2048);
+    light->SetShadowMapSize(1024, 1024);
     lightObj->AddComponent(light);
 
     world = CreateObject();
     grid = new WorldGridComponent();
-    grid->SetSize(32, 32);
+    grid->SetSize(24, 24);
     grid->SetBlockSize(20.0f);
     world->AddComponent(grid);
     grid->GenerateHillyTerrain(1, 1, BlockType::Dirt, BlockType::Stone);
 
     Object* player = CreateObject();
-    player->SetPosition(Vector3(0.0f, 10.0f, 120.0f));
+    player->SetPosition(Vector3(0.0f, 40.0f, 120.0f));
     player->SetSize(Vector3(1,10,1)/100);
     auto* pc = new PlayerController();
     pc->SetMoveSpeed(160.0f);

@@ -1,20 +1,29 @@
 #pragma once
 #include "component.h"
 #include "BlockComponent.h"
+#include "CameraComponent.h"
 #include <unordered_map>
 #include <string>
 #include <random>
+#include <cmath>
 
 class WorldGridComponent : public Component {
 public:
-	WorldGridComponent() : width(16), depth(16), blockSize(20.0f), originX(0.0f), originZ(0.0f) {}
+	WorldGridComponent() : width(16), depth(16), blockSize(20.0f), originX(0.0f), originZ(0.0f), maxRenderDistance(15.0f), lastCullingTime(0.0f) {}
 
 	void Init() override {}
-	void Update(float dt) override {}
+	void Update(float dt) override {
+		lastCullingTime += dt;
+		if (lastCullingTime >= 0.1f) {
+			updateVisibilityCulling();
+			lastCullingTime = 0.0f;
+		}
+	}
 
 	void SetSize(int w, int d) { width = w; depth = d; }
 	void SetBlockSize(float s) { blockSize = s; }
 	void SetOrigin(float ox, float oz) { originX = ox; originZ = oz; }
+	void SetMaxRenderDistance(float distance) { maxRenderDistance = distance; }
 
 	float GetBlockSize() const { return blockSize; }
 
@@ -58,7 +67,7 @@ public:
 				float amplitude = 1.0f;
 				float frequency = 0.1f;
 				
-				for (int octave = 0; octave < 3; ++octave) {
+				for (int octave = 0; octave < 2; ++octave) {
 					float x = gx * frequency;
 					float z = gz * frequency;
 					noise += amplitude * (noiseDist(rng) * 2.0f - 1.0f);
@@ -164,10 +173,39 @@ private:
 		grid.clear();
 	}
 
+	void updateVisibilityCulling() {
+		if (!object || !object->GetScene()) return;
+		
+		Vector3 cameraPos = Vector3(0, 0, 0);
+		const auto& objects = object->GetScene()->GetObjects();
+		for (auto* obj : objects) {
+			if (obj) {
+				auto* cam = obj->GetComponent<CameraComponent>();
+				if (cam && cam->IsActive()) {
+					cameraPos = obj->GetPosition3D();
+					break;
+				}
+			}
+		}
+		
+		for (auto& kv : grid) {
+			if (kv.second) {
+				Vector3 blockPos = kv.second->GetPosition3D();
+				Vector3 diff = blockPos - cameraPos;
+				float distance = std::sqrt(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
+				bool shouldBeVisible = distance <= maxRenderDistance * blockSize;
+				
+				kv.second->SetActive(shouldBeVisible);
+			}
+		}
+	}
+
 private:
 	int width;
 	int depth;
 	float blockSize;
 	float originX, originZ;
+	float maxRenderDistance;
+	float lastCullingTime;
 	std::unordered_map<std::string, Object*> grid;
 };

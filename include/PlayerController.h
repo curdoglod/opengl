@@ -92,7 +92,8 @@ public:
 		
 		if (isLeftClick) {
 			Vector3 currentPos = rayStart;
-			for (int i = 0; i < 50; ++i) {
+			float stepSize = grid->GetBlockSize() * 0.6f;
+			for (int i = 0; i < 30; ++i) {
 				int gx, gy, gz;
 				if (grid->WorldToGrid(currentPos, gx, gy, gz)) {
 					Object* block = grid->GetBlock(gx, gy, gz);
@@ -101,15 +102,16 @@ public:
 						break;
 					}
 				}
-				currentPos = currentPos + rayDir * 2.0f;
+				currentPos = currentPos + rayDir * stepSize;
 			}
 		}
 		else if (isRightClick) {
 			Vector3 currentPos = rayStart;
 			Vector3 lastEmptyPos;
 			bool foundEmpty = false;
+			float stepSize = grid->GetBlockSize() * 0.6f;
 			
-			for (int i = 0; i < 50; ++i) {
+			for (int i = 0; i < 30; ++i) {
 				int gx, gy, gz;
 				if (grid->WorldToGrid(currentPos, gx, gy, gz)) {
 					Object* block = grid->GetBlock(gx, gy, gz);
@@ -126,7 +128,7 @@ public:
 						foundEmpty = true;
 					}
 				}
-				currentPos = currentPos + rayDir * 2.0f;
+				currentPos = currentPos + rayDir * stepSize;
 			}
 		}
 	}
