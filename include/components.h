@@ -8,3 +8,6 @@
 #include "text.h" 
 #include "snake.h" 
 #include "Model3DComponent.h" 
+#include "BoxCollider3D.h"
+#include "Rigidbody3D.h"
+#include "LightComponent.h" 

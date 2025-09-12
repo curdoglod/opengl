@@ -34,6 +34,16 @@ public:
     void SetSizeIsRelative(bool enabled) { sizeIsRelative = enabled; }
     bool GetSizeIsRelative() const { return sizeIsRelative; }
 
+    // Added: expose model import-space AABB and computed dimensions
+    bool HasAabb() const { return aabbComputed; }
+    glm::vec3 GetAabbMin() const { return aabbMin; }
+    glm::vec3 GetAabbMax() const { return aabbMax; }
+    glm::vec3 GetModelDims() const { return modelDims; }
+
+    // Helpers for lighting/shadows
+    glm::mat4 ComputeModelMatrix() const;
+    void RenderDepthPass(const glm::mat4& model, GLuint depthProgram) const;
+
 private:
     bool loadModel(const std::string& path);
     void processNode(struct aiNode* node, const struct aiScene* scene);
