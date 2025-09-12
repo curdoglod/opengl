@@ -9,10 +9,8 @@ void MinecraftCloneScene::Init()
     Object* camObj = CreateObject();
     camObj->AddComponent(new CameraComponent());
     auto* cam = camObj->GetComponent<CameraComponent>();
-    cam->SetPerspective(60.0f, windowSize.x / windowSize.y, 0.1f, 200.0f);
-    camObj->SetPosition(Vector3(0.0f, 80.0f, 120.0f));
-    camObj->SetRotation(Vector3(25.0f, 0.0f, 0.0f));
-
+    cam->SetPerspective(60.0f, windowSize.x / windowSize.y, 1.0f, 1000.0f);
+    camObj->SetRotation(Vector3(50.0f, 0.0f, 0.0f));
     // Light
     Object* lightObj = CreateObject();
     auto* light = new LightComponent();
@@ -23,12 +21,26 @@ void MinecraftCloneScene::Init()
     light->SetShadowMapSize(2048, 2048);
     lightObj->AddComponent(light);
 
-    // Placeholder ground block
-    Object* ground = CreateObject();
-    ground->AddComponent(new Model3DComponent("Assets/board.fbx"));
-    ground->SetPosition(Vector3(0.0f, -1000.0f, 0.0f));
-    ground->SetSize(Vector3(2.0f, 0.5f, 2.0f));
-    ground->SetRotation(Vector3(0.0f, 0.0f, 0.0f));
+    // World grid holder
+    Object* world = CreateObject();
+    auto* grid = new WorldGridComponent();
+    grid->SetSize(32, 32);
+    grid->SetBlockSize(20.0f);
+    world->AddComponent(grid);
+    grid->GenerateHillyTerrain(1, 1, BlockType::Dirt, BlockType::Stone);
+
+    Object* player = CreateObject();
+    player->SetPosition(Vector3(0.0f, 60.0f, 120.0f));
+    player->SetSize(Vector3(1,10,1)/100);
+    auto* pc = new PlayerController();
+    pc->SetMoveSpeed(160.0f);
+    pc->SetCamera(camObj);
+    Vector3 camOffset(0.0f, 40.0f, 10.0f);
+    pc->SetCameraOffset(camOffset);
+    player->AddComponent(pc);
+    player->SetLayer(-1000);
+    camObj->SetPosition(player->GetPosition3D() + camOffset);
+    camObj->SetRotation(Vector3(30.0f, 0.0f, 0.0f));
 }
 
 void MinecraftCloneScene::Update()

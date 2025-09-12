@@ -10,4 +10,7 @@
 #include "Model3DComponent.h" 
 #include "BoxCollider3D.h"
 #include "Rigidbody3D.h"
-#include "LightComponent.h" 
+#include "LightComponent.h"
+#include "BlockComponent.h"
+#include "WorldGridComponent.h"
+#include "PlayerController.h" 

@@ -19,11 +19,12 @@ void Arkanoid3DScene::Init()
     light->SetColor(glm::vec3(1.0f, 1.0f, 1.0f));
     light->SetAmbient(glm::vec3(0.20f, 0.20f, 0.20f));
     light->SetShadowEnabled(true);
-    light->SetShadowMapSize(1024, 1024);
+    light->SetShadowMapSize(64, 64);
     lightObj->AddComponent(light);
 
     board = CreateObject();
     board->AddComponent(new Model3DComponent("Assets/board.fbx"));
+    board->GetComponent<Model3DComponent>()->SetAlbedoTextureFromFile("Assets/block_textures/grass.png");
     board->SetPosition(Vector3(0.0f, -1.5f, 0.0f));
     board->SetSize(Vector3(2,1,1)/200);
     board->SetRotation(Vector3(0.0f, 90.0f, 0.0f));
@@ -34,7 +35,7 @@ void Arkanoid3DScene::Init()
 
     ball = CreateObject();
     ball->AddComponent(new Model3DComponent("Assets/ball.fbx"));
-    ball->SetPosition(Vector3(0.0f, 10.0f, 0.0f));
+    ball->SetPosition(Vector3(0.0f, 30.0f, 0.0f));
     ball->SetSize(Vector3(1.0f, 1.0f,1.0f)/100);
     ball->SetRotation(Vector3(-90.0f, 0.0f, 0.0f));
     ball->SetLayer(120);

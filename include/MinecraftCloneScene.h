@@ -11,4 +11,9 @@ public:
             SwitchToScene(new StartScene());
         }
     }
+private:
+    Object* camObj;
+    Object* lightObj;
+    Object* world;
+    WorldGridComponent* grid;
 };

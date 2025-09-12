@@ -242,6 +242,38 @@ void Model3DComponent::RenderDepthPass(const glm::mat4& model, GLuint depthProgr
     }
 }
 
+bool Model3DComponent::SetAlbedoTextureFromFile(const std::string& fullPath)
+{
+    SDL_Surface* surface = IMG_Load(fullPath.c_str());
+    if (!surface) {
+        std::cerr << "Failed to load texture (override): " << IMG_GetError() << std::endl;
+        return false;
+    }
+    SDL_Surface* converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(surface);
+    if (!converted) {
+        std::cerr << "Failed to convert surface to RGBA32" << std::endl;
+        return false;
+    }
+
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, converted->w, converted->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, converted->pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    SDL_FreeSurface(converted);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    overrideAlbedoTexture = textureID;
+    return true;
+}
+
 // ==================== Update: Render model ====================
 void Model3DComponent::Update(float dt)
 {
@@ -316,11 +348,12 @@ void Model3DComponent::Update(float dt)
     glUniformMatrix4fv(lightVPLoc, 1, GL_FALSE, glm::value_ptr(lightVP));
     glUniform1i(useShadowsLoc, useShadows);
 
-    // Bind albedo texture
+    // Bind albedo texture: prefer override if present, otherwise first mesh texture
     for (auto& mesh : meshes) {
-        if (!mesh.textures.empty()) {
+        GLuint albedoTex = overrideAlbedoTexture ? overrideAlbedoTexture : (mesh.textures.empty() ? 0 : mesh.textures[0].id);
+        if (albedoTex != 0) {
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, mesh.textures[0].id);
+            glBindTexture(GL_TEXTURE_2D, albedoTex);
             glUniform1i(glGetUniformLocation(shaderProgram, "ourTexture"), 0);
         }
         glBindVertexArray(mesh.VAO);
@@ -504,23 +537,28 @@ GLuint Model3DComponent::TextureFromFile(const char* path, const std::string& di
         return 0;
     }
 
+    SDL_Surface* converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(surface);
+    if (!converted) {
+        std::cerr << "Failed to convert texture to RGBA32" << std::endl;
+        return 0;
+    }
+
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
 
     // Texture parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    GLenum format = (surface->format->BytesPerPixel == 4) ? GL_RGBA : GL_RGB;
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, surface->w, surface->h, 0, format, GL_UNSIGNED_BYTE, surface->pixels);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, converted->w, converted->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, converted->pixels);
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    SDL_FreeSurface(surface);
+    SDL_FreeSurface(converted);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     return textureID;

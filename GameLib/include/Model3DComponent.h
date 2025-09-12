@@ -44,6 +44,10 @@ public:
     glm::mat4 ComputeModelMatrix() const;
     void RenderDepthPass(const glm::mat4& model, GLuint depthProgram) const;
 
+    // Override albedo/diffuse texture from code
+    void SetAlbedoTexture(GLuint textureId) { overrideAlbedoTexture = textureId; }
+    bool SetAlbedoTextureFromFile(const std::string& fullPath);
+
 private:
     bool loadModel(const std::string& path);
     void processNode(struct aiNode* node, const struct aiScene* scene);
@@ -66,5 +70,8 @@ private:
     bool aabbComputed = false;
     glm::vec3 modelDims = glm::vec3(0.0f);
     bool sizeIsRelative = true;
+
+    // Optional override for albedo texture
+    GLuint overrideAlbedoTexture = 0;
 };
 
