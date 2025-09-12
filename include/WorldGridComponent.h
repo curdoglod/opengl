@@ -18,7 +18,6 @@ public:
 
 	float GetBlockSize() const { return blockSize; }
 
-	// Generate a flat ground at y=0 spanning width x depth
 	void GenerateFlat(BlockType type) {
 		if (!object) return;
 		clearAll();
@@ -29,8 +28,6 @@ public:
 		}
 	}
 
-	// Random columns: for each (x,z) create a stack of blocks with random height [minH,maxH]
-	// top block typeTop, below fill with typeBelow
 	void GenerateRandomColumns(int minH, int maxH, BlockType typeTop, BlockType typeBelow, unsigned int seed = std::random_device{}()) {
 		if (!object) return;
 		clearAll();
@@ -48,24 +45,19 @@ public:
 		}
 	}
 
-	// Generate solid terrain with small hills using noise-like algorithm
 	void GenerateHillyTerrain(int baseHeight, int maxHillHeight, BlockType surfaceType, BlockType undergroundType, unsigned int seed = std::random_device{}()) {
 		if (!object) return;
 		clearAll();
 		std::mt19937 rng(seed);
 		std::uniform_real_distribution<float> noiseDist(0.0f, 1.0f);
 		
-		// Generate height map with simple noise
 		std::vector<std::vector<int>> heightMap(width, std::vector<int>(depth, baseHeight));
-		
-		// Add hills using multiple octaves of noise
 		for (int gx = 0; gx < width; ++gx) {
 			for (int gz = 0; gz < depth; ++gz) {
 				float noise = 0.0f;
 				float amplitude = 1.0f;
 				float frequency = 0.1f;
 				
-				// Multiple octaves for more natural hills
 				for (int octave = 0; octave < 3; ++octave) {
 					float x = gx * frequency;
 					float z = gz * frequency;
@@ -74,14 +66,12 @@ public:
 					frequency *= 2.0f;
 				}
 				
-				// Convert noise to height
 				int height = baseHeight + (int)(noise * maxHillHeight);
 				height = std::max(1, std::min(height, baseHeight + maxHillHeight));
 				heightMap[gx][gz] = height;
 			}
 		}
 		
-		// Smooth the height map
 		for (int gx = 1; gx < width - 1; ++gx) {
 			for (int gz = 1; gz < depth - 1; ++gz) {
 				int avg = (heightMap[gx-1][gz] + heightMap[gx+1][gz] + 
@@ -91,7 +81,6 @@ public:
 			}
 		}
 		
-		// Create blocks based on height map
 		for (int gz = 0; gz < depth; ++gz) {
 			for (int gx = 0; gx < width; ++gx) {
 				int height = heightMap[gx][gz];
@@ -103,7 +92,6 @@ public:
 		}
 	}
 
-	// Convert world position -> grid indices (y derived as nearest layer)
 	bool WorldToGrid(const Vector3& world, int& gx, int& gy, int& gz) const {
 		float fx = (world.x - originX) / blockSize + width * 0.5f;
 		float fz = (world.z - originZ) / blockSize + depth * 0.5f;
@@ -114,7 +102,6 @@ public:
 		return gx >= 0 && gx < width && gz >= 0 && gz < depth && gy >= 0;
 	}
 
-	// Convert grid indices -> world position at center of block
 	Vector3 GridToWorld(int gx, int gy, int gz) const {
 		float wx = originX + (gx - width * 0.5f) * blockSize;
 		float wy = gy * blockSize;
@@ -122,7 +109,6 @@ public:
 		return Vector3(wx, wy, wz);
 	}
 
-	// Block operations (3D)
 	Object* GetBlock(int gx, int gy, int gz) const {
 		std::string key = keyFor(gx, gy, gz);
 		auto it = grid.find(key);
@@ -145,7 +131,6 @@ public:
 		}
 	}
 
-	// Backward-compatible 2D helpers (y=0)
 	Object* GetBlock(int gx, int gz) const { return GetBlock(gx, 0, gz); }
 	Object* CreateBlockAt(int gx, int gz, BlockType type) { return CreateBlockAt(gx, 0, gz, type); }
 	void RemoveBlockAt(int gx, int gz) { RemoveBlockAt(gx, 0, gz); }
@@ -158,12 +143,10 @@ private:
 	Object* createBlock(int gx, int gy, int gz, BlockType type) {
 		Object* b = CreateObject();
 		b->AddComponent(new BlockComponent());
-		// Force absolute sizing to avoid model-dimension drift
 		if (auto* model = b->GetComponent<Model3DComponent>()) {
 			model->SetSizeIsRelative(false);
 		}
 		b->GetComponent<BlockComponent>()->SetType(type);
-		// Position and scale snapped to grid
 		Vector3 pos = GridToWorld(gx, gy, gz);
 		b->SetPosition(Vector3(std::round(pos.x), std::round(pos.y), std::round(pos.z)));
 		b->SetSize(Vector3(1,1,1) * (blockSize / 35.0f));

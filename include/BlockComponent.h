@@ -1,6 +1,7 @@
 #pragma once
 #include "component.h"
 #include "Model3DComponent.h"
+#include "BoxCollider3D.h"
 
 enum class BlockType {
 	Dirt,
@@ -15,7 +16,6 @@ public:
 	BlockComponent() : type(BlockType::Dirt) {}
 
 	void Init() override {
-		// Ensure cube model exists
 		if (!object->GetComponent<Model3DComponent>()) {
 			object->AddComponent(new Model3DComponent("Assets/cube.fbx"));
 		}
@@ -39,10 +39,10 @@ private:
 		std::string path;
 		switch (type) {
 			case BlockType::Dirt:  path = "Assets/block_textures/dirt.png"; break;
-			case BlockType::Stone: path = "Assets/block_textures/grass.png"; break;
+			case BlockType::Stone: path = "Assets/block_textures/stone.png"; break;
 			case BlockType::Grass: path = "Assets/block_textures/grass.png"; break;
-			case BlockType::Sand:  path = "Assets/block_textures/grass.png"; break;
-			case BlockType::Wood:  path = "Assets/block_textures/grass.png"; break;
+			case BlockType::Sand:  path = "Assets/block_textures/sand.png"; break;
+			case BlockType::Wood:  path = "Assets/block_textures/wood.png"; break;
 		}
 		model->SetAlbedoTextureFromFile(path);
 	}
