@@ -16,6 +16,12 @@ public:
     }
     virtual void Update(float deltaTime) {
     }
+
+    // Called after ALL objects have run Update().
+    // Use for rendering or anything that depends on the final state of
+    // other objects this frame (e.g. camera position).
+    virtual void LateUpdate(float deltaTime) {
+    }
  
     virtual void OnMouseButtonDown(Vector2 mouse_position) {
 

@@ -28,7 +28,8 @@ public:
     virtual ~Model3DComponent();
 
     virtual void Init() override;   
-    virtual void Update(float dt) override; 
+    virtual void Update(float dt) override;
+    virtual void LateUpdate(float dt) override;
 
     // Interpret Object::size as scale factors relative to imported dimensions
     void SetSizeIsRelative(bool enabled) { sizeIsRelative = enabled; }

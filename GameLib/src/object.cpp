@@ -169,6 +169,14 @@ void Object::update(float deltaTime)
 	this->deltatime = deltaTime;
 }
 
+void Object::lateUpdate(float deltaTime)
+{
+	for (auto &component : components)
+	{
+		component->LateUpdate(deltaTime);
+	}
+}
+
 SceneManager *Object::GetScene() const
 {
 	return currentScene;

@@ -286,6 +286,12 @@ void TextComponent::setAlignment(TextAlignment newAlignment)
 // ============================ Update (render) ============================
 void TextComponent::Update(float dt)
 {
+    (void)dt;
+    // Logic only — rendering moved to LateUpdate
+}
+
+void TextComponent::LateUpdate(float dt)
+{
     glDisable(GL_DEPTH_TEST);
     // Nothing to draw if texture or VAO is missing
     if (!textureID || !VAO)

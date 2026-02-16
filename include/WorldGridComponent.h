@@ -9,15 +9,11 @@
 
 class WorldGridComponent : public Component {
 public:
-	WorldGridComponent() : width(16), depth(16), blockSize(20.0f), originX(0.0f), originZ(0.0f), maxRenderDistance(15.0f), lastCullingTime(0.0f) {}
+	WorldGridComponent() : width(16), depth(16), blockSize(20.0f), originX(0.0f), originZ(0.0f), maxRenderDistance(50.0f), lastCullingTime(0.0f) {}
 
 	void Init() override {}
 	void Update(float dt) override {
-		lastCullingTime += dt;
-		if (lastCullingTime >= 0.1f) {
-			updateVisibilityCulling();
-			lastCullingTime = 0.0f;
-		}
+		// Visibility culling disabled — small grid, render everything
 	}
 
 	void SetSize(int w, int d) { width = w; depth = d; }
@@ -58,29 +54,50 @@ public:
 		if (!object) return;
 		clearAll();
 		std::mt19937 rng(seed);
-		std::uniform_real_distribution<float> noiseDist(0.0f, 1.0f);
-		
+
+		// Build a value-noise heightmap with proper spatial coherence
 		std::vector<std::vector<int>> heightMap(width, std::vector<int>(depth, baseHeight));
+
+		// Generate coarse random grid for value noise interpolation
+		// Use a grid spacing so nearby cells share interpolated values
+		const int gridStep = 4; // noise grid cell size
+		int noiseW = (width  / gridStep) + 2;
+		int noiseD = (depth  / gridStep) + 2;
+		std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+		std::vector<std::vector<float>> noiseGrid(noiseW, std::vector<float>(noiseD));
+		for (int i = 0; i < noiseW; ++i)
+			for (int j = 0; j < noiseD; ++j)
+				noiseGrid[i][j] = dist01(rng);
+
+		// Bilinear interpolation of noise grid to produce smooth heightmap
 		for (int gx = 0; gx < width; ++gx) {
 			for (int gz = 0; gz < depth; ++gz) {
-				float noise = 0.0f;
-				float amplitude = 1.0f;
-				float frequency = 0.1f;
-				
-				for (int octave = 0; octave < 2; ++octave) {
-					float x = gx * frequency;
-					float z = gz * frequency;
-					noise += amplitude * (noiseDist(rng) * 2.0f - 1.0f);
-					amplitude *= 0.5f;
-					frequency *= 2.0f;
-				}
-				
-				int height = baseHeight + (int)(noise * maxHillHeight);
-				height = std::max(1, std::min(height, baseHeight + maxHillHeight));
+				float fx = (float)gx / gridStep;
+				float fz = (float)gz / gridStep;
+				int ix = (int)fx;
+				int iz = (int)fz;
+				float tx = fx - ix;
+				float tz = fz - iz;
+				// Smoothstep for smoother transitions
+				tx = tx * tx * (3.0f - 2.0f * tx);
+				tz = tz * tz * (3.0f - 2.0f * tz);
+
+				float v00 = noiseGrid[ix][iz];
+				float v10 = noiseGrid[ix + 1][iz];
+				float v01 = noiseGrid[ix][iz + 1];
+				float v11 = noiseGrid[ix + 1][iz + 1];
+				float val = v00 * (1 - tx) * (1 - tz)
+				          + v10 * tx * (1 - tz)
+				          + v01 * (1 - tx) * tz
+				          + v11 * tx * tz;
+
+				int height = baseHeight + (int)(val * maxHillHeight);
+				height = std::max(1, height);
 				heightMap[gx][gz] = height;
 			}
 		}
-		
+
+		// Additional smoothing pass
 		for (int gx = 1; gx < width - 1; ++gx) {
 			for (int gz = 1; gz < depth - 1; ++gz) {
 				int avg = (heightMap[gx-1][gz] + heightMap[gx+1][gz] + 
@@ -89,7 +106,8 @@ public:
 				heightMap[gx][gz] = avg;
 			}
 		}
-		
+
+		// Create blocks from heightmap
 		for (int gz = 0; gz < depth; ++gz) {
 			for (int gx = 0; gx < width; ++gx) {
 				int height = heightMap[gx][gz];
@@ -105,9 +123,9 @@ public:
 		float fx = (world.x - originX) / blockSize + width * 0.5f;
 		float fz = (world.z - originZ) / blockSize + depth * 0.5f;
 		float fy = world.y / blockSize;
-		gx = (int)std::round(fx);
-		gz = (int)std::round(fz);
-		gy = (int)std::round(fy);
+		gx = (int)std::floor(fx + 0.5f);
+		gz = (int)std::floor(fz + 0.5f);
+		gy = (int)std::floor(fy + 0.5f);
 		return gx >= 0 && gx < width && gz >= 0 && gz < depth && gy >= 0;
 	}
 
@@ -126,6 +144,8 @@ public:
 
 	Object* CreateBlockAt(int gx, int gy, int gz, BlockType type) {
 		if (gx < 0 || gx >= width || gz < 0 || gz >= depth || gy < 0) return nullptr;
+		// Don't place a block if one already exists here
+		if (GetBlock(gx, gy, gz)) return nullptr;
 		return createBlock(gx, gy, gz, type);
 	}
 
@@ -157,7 +177,7 @@ private:
 		}
 		b->GetComponent<BlockComponent>()->SetType(type);
 		Vector3 pos = GridToWorld(gx, gy, gz);
-		b->SetPosition(Vector3(std::round(pos.x), std::round(pos.y), std::round(pos.z)));
+		b->SetPosition(pos);
 		b->SetSize(Vector3(1,1,1) * (blockSize / 35.0f));
 		std::string key = keyFor(gx, gy, gz);
 		grid[key] = b;

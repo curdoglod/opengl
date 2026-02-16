@@ -77,7 +77,7 @@ float ShadowCalculation(vec4 lightSpacePos, vec3 normal, vec3 lightDirection)
     float closestDepth = texture(shadowMap, projCoords.xy).r;
     float currentDepth = projCoords.z;
 
-    float bias = max(0.003, 0.002 * (1.0 - max(dot(normalize(normal), -normalize(lightDirection)), 0.0)));
+    float bias = max(0.005, 0.003 * (1.0 - max(dot(normalize(normal), -normalize(lightDirection)), 0.0)));
 
     float shadow = 0.0;
     vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
@@ -216,8 +216,9 @@ glm::mat4 Model3DComponent::ComputeModelMatrix() const
         float sx = dims.x != 0.0f ? targetSize.x / dims.x : 1.0f;
         float sy = dims.y != 0.0f ? targetSize.y / dims.y : 1.0f;
         float sz = dims.z != 0.0f ? targetSize.z / dims.z : 1.0f;
-        local = glm::translate(local, -center);
+        // First translate to center the model at origin, then scale
         local = glm::scale(local, glm::vec3(sx, sy, sz));
+        local = glm::translate(local, -center);
     } else {
         local = glm::scale(local, glm::vec3(targetSize.x, targetSize.y, targetSize.z));
     }
@@ -274,8 +275,14 @@ bool Model3DComponent::SetAlbedoTextureFromFile(const std::string& fullPath)
     return true;
 }
 
-// ==================== Update: Render model ====================
+// ==================== Update: no-op (rendering moved to LateUpdate) ====================
 void Model3DComponent::Update(float dt)
+{
+    (void)dt;
+}
+
+// ==================== LateUpdate: Render model (runs after all logic updates) ===========
+void Model3DComponent::LateUpdate(float dt)
 {
     glEnable(GL_DEPTH_TEST);
 

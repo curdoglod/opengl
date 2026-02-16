@@ -43,6 +43,7 @@ public:
     void RemoveComponent();
   
     void update(float deltaTime);
+    void lateUpdate(float deltaTime);
     SceneManager* GetScene() const;
     SDL_Renderer* GetRenderer() const;
     void UpdateEvents(SDL_Event& event);

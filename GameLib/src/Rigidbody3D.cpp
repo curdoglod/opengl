@@ -9,14 +9,19 @@
 void Rigidbody3D::Update(float dt)
 {
     if (!object) return;
+
+    // Apply gravity as an acceleration (a = g, not a = g * m)
+    Vector3 frameAccel = acceleration;
     if (useGravity) {
-        acceleration.y += gravity * mass;
+        frameAccel.y += gravity;
     }
 
-    integrate(dt);
+    // Integrate velocity and position
+    velocity += frameAccel * dt;
+    object->SetPosition(object->GetPosition3D() + velocity * dt);
 
-    // Reset per-frame acceleration
-    acceleration = Vector3(0,0,0);
+    // Reset user-applied acceleration (gravity is re-applied each frame above)
+    acceleration = Vector3(0, 0, 0);
 
     // Resolve collisions after movement
     resolveCollisions();

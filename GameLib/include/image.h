@@ -49,21 +49,30 @@ public:
     }
     void Update(float deltaTime) override
     {
+        // Logic only — rendering moved to LateUpdate
+    }
+
+    void LateUpdate(float deltaTime) override
+    {
         if (sprite != nullptr)
+        {
+            // Keep sprite size in sync with object size so that
+            // object->SetSize() works as expected (like it did in 2D/SDL).
+            Vector2 objSize = object->GetSize();
+            if (objSize.x > 0 && objSize.y > 0) {
+                sprite->setSize((int)objSize.x, (int)objSize.y);
+            }
             sprite->draw(object->GetPosition(), object->GetAngle().z);
+        }
     }
 
     void SetSize(const Vector2 &newSize)
     {
+        size = newSize;
         if (sprite != nullptr)
         {
             sprite->setSize((int)newSize.x, (int)newSize.y);
-            size = newSize;
-            object->InitSize();
-        }
-        else
-        {
-            std::cerr << "Sprite is null" << std::endl;
+            if (object) object->InitSize();
         }
     }
 

@@ -33,7 +33,10 @@ public:
     
     void UpdateEvents(SDL_Event event) {
       
-        for (auto& object : objects) {
+        // Iterate over a snapshot so that handlers can safely
+        // create / delete objects without invalidating the loop.
+        auto snapshot = objects;
+        for (auto& object : snapshot) {
             if (object->active) {
                 object->UpdateEvents(event);
             }
@@ -66,9 +69,17 @@ public:
 
    void UpdateScene(float deltaTime) {
        Update();
+        // Pass 1: Logic update (movement, physics, input handling, etc.)
         for (auto& object : objects) {
             if (object->active) {
                 object->update(deltaTime);
+            }
+        }
+        // Pass 2: Late update / rendering (all objects see the final camera
+        // position, light matrices, etc. for this frame).
+        for (auto& object : objects) {
+            if (object->active) {
+                object->lateUpdate(deltaTime);
             }
         }
     }

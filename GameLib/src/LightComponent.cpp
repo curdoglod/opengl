@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
 #include <iostream>
+#include <cmath>
 
 namespace {
 GLuint compile(GLenum type, const char* src) {
@@ -72,6 +73,14 @@ void main(){ }
 void LightComponent::Update(float dt)
 {
     (void)dt;
+    // Logic-only pass — nothing to do here.
+    // Shadow map rendering is done in LateUpdate so that the camera
+    // position is finalised before we build the depth buffer.
+}
+
+void LightComponent::LateUpdate(float dt)
+{
+    (void)dt;
     if (!object) return;
     SceneManager* scene = object->GetScene();
     if (scene) {
@@ -107,7 +116,7 @@ void LightComponent::ensureShadowResources()
 
 void LightComponent::computeLightMatrices(SceneManager* scene)
 {
-    // Compute tight light-space bounds from scene models for better texel density
+    // Compute world-space AABB from all scene models
     glm::vec3 wsMin( 1e9f), wsMax(-1e9f);
     bool any = false;
     const auto& objects = scene->GetObjects();
@@ -121,7 +130,7 @@ void LightComponent::computeLightMatrices(SceneManager* scene)
             {mn.x, mn.y, mn.z}, {mx.x, mn.y, mn.z}, {mn.x, mx.y, mn.z}, {mx.x, mx.y, mn.z},
             {mn.x, mn.y, mx.z}, {mx.x, mn.y, mx.z}, {mn.x, mx.y, mx.z}, {mx.x, mx.y, mx.z}
         };
-        for (int i=0;i<8;++i){
+        for (int i = 0; i < 8; ++i) {
             glm::vec4 w = model * glm::vec4(corners[i], 1.0f);
             wsMin = glm::min(wsMin, glm::vec3(w));
             wsMax = glm::max(wsMax, glm::vec3(w));
@@ -129,28 +138,31 @@ void LightComponent::computeLightMatrices(SceneManager* scene)
         }
     }
     if (!any) {
-        // Fallback to default frustum
         glm::vec3 lightPos = glm::vec3(0.0f) - direction * 50.0f;
-        glm::vec3 target = glm::vec3(0.0f);
-        glm::vec3 up = glm::vec3(0,1,0);
-        lightView = glm::lookAt(lightPos, target, up);
+        glm::vec3 up = glm::vec3(0, 1, 0);
+        lightView = glm::lookAt(lightPos, glm::vec3(0.0f), up);
         float orthoRange = 50.0f;
         lightProj = glm::ortho(-orthoRange, orthoRange, -orthoRange, orthoRange, 0.1f, 150.0f);
         return;
     }
 
+    // Use a STABLE center and radius that don't change frame-to-frame
+    // Round the scene bounds to fixed increments so the frustum doesn't jitter
     glm::vec3 center = (wsMin + wsMax) * 0.5f;
     glm::vec3 extents = (wsMax - wsMin) * 0.5f;
     float radius = glm::length(extents);
     if (radius < 1.0f) radius = 1.0f;
 
+    // Quantize radius to prevent jittering when blocks are added/removed
+    radius = std::ceil(radius);
+
+    // Build the light view matrix from a stable direction
+    glm::vec3 up = (std::abs(direction.y) > 0.99f) ? glm::vec3(0, 0, 1) : glm::vec3(0, 1, 0);
     glm::vec3 lightPos = center - direction * (radius + 5.0f);
-    glm::vec3 up = glm::vec3(0,1,0);
     lightView = glm::lookAt(lightPos, center, up);
 
-    // Compute bounds in light space for ortho
+    // Compute light-space bounds of all scene geometry
     glm::vec3 lsMin( 1e9f), lsMax(-1e9f);
-    glm::mat4 view = lightView;
     for (auto* obj : objects) {
         auto* comp = obj->GetComponent<Model3DComponent>();
         if (!comp || !comp->HasAabb()) continue;
@@ -161,15 +173,36 @@ void LightComponent::computeLightMatrices(SceneManager* scene)
             {mn.x, mn.y, mn.z}, {mx.x, mn.y, mn.z}, {mn.x, mx.y, mn.z}, {mx.x, mx.y, mn.z},
             {mn.x, mn.y, mx.z}, {mx.x, mn.y, mx.z}, {mn.x, mx.y, mx.z}, {mx.x, mx.y, mx.z}
         };
-        for (int i=0;i<8;++i){
+        for (int i = 0; i < 8; ++i) {
             glm::vec4 w = model * glm::vec4(corners[i], 1.0f);
-            glm::vec4 l = view * w;
+            glm::vec4 l = lightView * w;
             lsMin = glm::min(lsMin, glm::vec3(l));
             lsMax = glm::max(lsMax, glm::vec3(l));
         }
     }
     float margin = 1.0f;
-    lightProj = glm::ortho(lsMin.x - margin, lsMax.x + margin, lsMin.y - margin, lsMax.y + margin, 0.1f, (lsMax.z - lsMin.z) + 10.0f);
+    float lsLeft   = lsMin.x - margin;
+    float lsRight  = lsMax.x + margin;
+    float lsBottom = lsMin.y - margin;
+    float lsTop    = lsMax.y + margin;
+    float lsNear   = 0.1f;
+    float lsFar    = (lsMax.z - lsMin.z) + 10.0f;
+
+    // ---- Snap ortho frustum to shadow-texel boundaries (eliminates shimmer) ----
+    // The world-space size of a single shadow texel:
+    float frustumWidth  = lsRight - lsLeft;
+    float frustumHeight = lsTop - lsBottom;
+    float texelSizeX = frustumWidth  / (float)shadowWidth;
+    float texelSizeY = frustumHeight / (float)shadowHeight;
+
+    // Snap the ortho bounds so that moving the camera never shifts shadows
+    // by a sub-texel amount — this eliminates the "swimming" artifact.
+    lsLeft   = std::floor(lsLeft   / texelSizeX) * texelSizeX;
+    lsRight  = std::ceil (lsRight  / texelSizeX) * texelSizeX;
+    lsBottom = std::floor(lsBottom / texelSizeY) * texelSizeY;
+    lsTop    = std::ceil (lsTop    / texelSizeY) * texelSizeY;
+
+    lightProj = glm::ortho(lsLeft, lsRight, lsBottom, lsTop, lsNear, lsFar);
 }
 
 void LightComponent::RenderShadowMap(SceneManager* scene)

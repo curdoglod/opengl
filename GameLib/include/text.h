@@ -34,6 +34,7 @@ public:
 
     virtual void Init() override;       
     virtual void Update(float dt) override; 
+    virtual void LateUpdate(float dt) override;
 
     virtual TextComponent* Clone() const override {
         return new TextComponent(fontSize, text, color, alignment);
