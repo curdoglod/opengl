@@ -4,6 +4,7 @@
 #include "BlockComponent.h"
 #include "WorldGridComponent.h"
 #include "CameraComponent.h"
+#include "InputManager.h"
 #include <SDL.h>
 #include <cmath>
 #include <algorithm>
@@ -35,9 +36,7 @@ public:
 		, gravity(-600.0f)
 		, isGrounded(false)
 		, jumpSpeed(220.0f)
-	{
-		keyW = keyA = keyS = keyD = keySpace = false;
-	}
+	{}
 
 	// --- Setup helpers (call before adding to Object) -----------------------
 
@@ -58,6 +57,14 @@ public:
 	void Update(float dt) override {
 		if (!object) return;
 
+		auto& input = InputManager::Get();
+
+		// ---- Mouse look ----------------------------------------------------
+		Vector2 mouseDelta = input.GetMouseDelta();
+		yaw   += mouseDelta.x * mouseSensitivity;
+		pitch += mouseDelta.y * mouseSensitivity;
+		pitch = std::max(-89.0f, std::min(89.0f, pitch));
+
 		Vector3 pos = object->GetPosition3D();
 		WorldGridComponent* grid = findGrid();
 
@@ -67,8 +74,8 @@ public:
 		}
 
 		// ---- Horizontal movement (WASD relative to yaw) --------------------
-		float vertical   = (keyW ? 1.0f : 0.0f) + (keyS ? -1.0f : 0.0f);
-		float horizontal = (keyD ? 1.0f : 0.0f) + (keyA ? -1.0f : 0.0f);
+		float vertical   = (input.IsKeyDown(SDLK_w) ? 1.0f : 0.0f) + (input.IsKeyDown(SDLK_s) ? -1.0f : 0.0f);
+		float horizontal = (input.IsKeyDown(SDLK_d) ? 1.0f : 0.0f) + (input.IsKeyDown(SDLK_a) ? -1.0f : 0.0f);
 
 		if (vertical != 0.0f || horizontal != 0.0f) {
 			const float toRad = 3.1415926535f / 180.0f;
@@ -112,7 +119,7 @@ public:
 		}
 
 		// ---- Vertical movement (gravity + jump) ----------------------------
-		if (keySpace && isGrounded) {
+		if (input.IsKeyDown(SDLK_SPACE) && isGrounded) {
 			velocityY = jumpSpeed;
 			isGrounded = false;
 		}
@@ -154,36 +161,12 @@ public:
 
 	// --- Input events -------------------------------------------------------
 
-	void onKeyPressed(SDL_Keycode key) override {
-		if (key == SDLK_w) keyW = true;
-		if (key == SDLK_a) keyA = true;
-		if (key == SDLK_s) keyS = true;
-		if (key == SDLK_d) keyD = true;
-		if (key == SDLK_SPACE) keySpace = true;
-	}
-
-	void onKeyReleased(SDL_Keycode key) override {
-		if (key == SDLK_w) keyW = false;
-		if (key == SDLK_a) keyA = false;
-		if (key == SDLK_s) keyS = false;
-		if (key == SDLK_d) keyD = false;
-		if (key == SDLK_SPACE) keySpace = false;
-	}
-
-	void OnMouseButtonMotion(Vector2 /*mouse_position*/) override {
-		int dx = 0, dy = 0;
-		SDL_GetRelativeMouseState(&dx, &dy);
-		yaw   += dx * mouseSensitivity;
-		pitch += dy * mouseSensitivity;
-		pitch = std::max(-89.0f, std::min(89.0f, pitch));
-	}
-
 	void OnMouseButtonDown(Vector2 /*mouse_position*/) override {
 		if (!object || !object->GetScene()) return;
 
-		Uint32 mouseState = SDL_GetMouseState(nullptr, nullptr);
-		bool isLeftClick  = (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT))  != 0;
-		bool isRightClick = (mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
+		auto& clickInput = InputManager::Get();
+		bool isLeftClick  = clickInput.IsMouseButtonDown(SDL_BUTTON_LEFT);
+		bool isRightClick = clickInput.IsMouseButtonDown(SDL_BUTTON_RIGHT);
 
 		WorldGridComponent* grid = findGrid();
 		if (!grid) return;
@@ -357,9 +340,6 @@ private:
 	}
 
 private:
-	// Input state
-	bool keyW, keyA, keyS, keyD, keySpace;
-
 	// Movement
 	float moveSpeed;
 	float velocityY;

@@ -178,7 +178,7 @@ private:
 		b->GetComponent<BlockComponent>()->SetType(type);
 		Vector3 pos = GridToWorld(gx, gy, gz);
 		b->SetPosition(pos);
-		b->SetSize(Vector3(1,1,1) * (blockSize / 35.0f));
+		b->SetSize(Vector3(1,1,1) * (blockSize * WORLD_UNIT_SCALE));
 		std::string key = keyFor(gx, gy, gz);
 		grid[key] = b;
 		return b;

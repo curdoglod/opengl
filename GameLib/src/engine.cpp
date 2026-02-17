@@ -5,6 +5,8 @@
 #include <SDL_ttf.h>
 #include <algorithm>
 #include "SceneManager.h"
+#include "Renderer.h"
+#include "InputManager.h"
 #include <chrono>
 #include <GL/glew.h>
 
@@ -39,10 +41,18 @@ struct Engine::Impl
 
     void Tick(float deltaTime)
     {
+        int ww, wh;
+        SDL_GetWindowSize(m_window, &ww, &wh);
+        Renderer::Get().SetWindowSize(ww, wh);
+        glViewport(0, 0, ww, wh);
+
+        InputManager::Get().BeginFrame();
 
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
+            InputManager::Get().ProcessEvent(event);
+
             if (event.type == SDL_QUIT)
             {
                 SDL_DestroyWindow(m_window);
@@ -68,7 +78,6 @@ struct Engine::Impl
 
     int FPS = 60;
     SDL_Window *m_window = nullptr;
-    SDL_Renderer *m_renderer = nullptr;
     std::string nameWindow;
 
     SceneManager *currentScene = nullptr;
@@ -159,7 +168,7 @@ void Engine::ChangeScene(SceneManager *newScene)
     }
 
     impl->currentScene = newScene;
-    impl->currentScene->PreInit(this, impl->m_renderer, impl->m_window);
+    impl->currentScene->PreInit(this, impl->m_window);
     impl->currentScene->Awake();
     impl->currentScene->Init();
 }
@@ -179,6 +188,7 @@ void Engine::SetFPS(const int &fps) { impl->FPS = fps; };
 void Engine::SetWindowSize(const int &w, const int &h)
 {
     SDL_SetWindowSize(impl->m_window, w, h);
+    Renderer::Get().SetWindowSize(w, h);
 }
 
 void Engine::SetWindowTitle(const std::string &newTitle)
@@ -188,7 +198,6 @@ void Engine::SetWindowTitle(const std::string &newTitle)
 
 void Engine::Quit()
 {
-    SDL_DestroyRenderer(impl->m_renderer);
     SDL_DestroyWindow(impl->m_window);
     IMG_Quit();
     SDL_Quit();
@@ -196,7 +205,6 @@ void Engine::Quit()
 
 Engine::~Engine()
 {
-    SDL_DestroyRenderer(impl->m_renderer);
     SDL_DestroyWindow(impl->m_window);
     IMG_Quit();
     SDL_Quit();

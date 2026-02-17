@@ -11,7 +11,7 @@ glm::mat4 CameraComponent::GetViewMatrix() const {
     view = glm::rotate(view, glm::radians(ang.x), glm::vec3(1,0,0));
     view = glm::rotate(view, glm::radians(ang.y), glm::vec3(0,1,0));
     view = glm::rotate(view, glm::radians(ang.z), glm::vec3(0,0,1));
-    view = glm::translate(view, glm::vec3(-pos.x/35.0f, -pos.y/35.0f, -pos.z/35.0f));
+    view = glm::translate(view, glm::vec3(-pos.x * WORLD_UNIT_SCALE, -pos.y * WORLD_UNIT_SCALE, -pos.z * WORLD_UNIT_SCALE));
     return view;
 }
 

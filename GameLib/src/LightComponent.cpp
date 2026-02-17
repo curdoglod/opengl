@@ -1,4 +1,5 @@
 #include "LightComponent.h"
+#include "Renderer.h"
 #include "SceneManager.h"
 #include "object.h"
 #include "Model3DComponent.h"
@@ -211,8 +212,6 @@ void LightComponent::RenderShadowMap(SceneManager* scene)
     ensureShadowResources();
     computeLightMatrices(scene);
 
-    Vector2 ws = scene->GetWindowSize();
-
     glViewport(0,0,shadowWidth,shadowHeight);
     glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -232,7 +231,7 @@ void LightComponent::RenderShadowMap(SceneManager* scene)
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(0);
-    glViewport(0, 0, (int)ws.x, (int)ws.y);
+    glViewport(0, 0, Renderer::Get().GetWindowWidth(), Renderer::Get().GetWindowHeight());
 }
 
 LightComponent* LightComponent::FindActive(SceneManager* scene)

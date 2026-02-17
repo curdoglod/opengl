@@ -1,4 +1,5 @@
 #include "sprite.h"
+#include "Renderer.h"
 #include <SDL_image.h>
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
@@ -185,7 +186,7 @@ void Sprite::draw(const Vector2& pos, float angle) {
 
     // Create orthographic projection
     // Window assumed to be 800x480; adjust as needed.
-    glm::mat4 projection = glm::ortho(0.0f, 800.0f, 480.0f, 0.0f, -1.0f, 1.0f);
+    glm::mat4 projection = Renderer::Get().GetOrthoProjection();
     
     GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
     GLint projLoc  = glGetUniformLocation(shaderProgram, "projection");

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <SDL_image.h>
 #include "ArchiveUnpacker.h"
+#include "Renderer.h"
 
 class SceneManager {
 public:
@@ -19,8 +20,8 @@ public:
         objects.clear();
     }
 
-    void PreInit(Engine* engine, SDL_Renderer* renderer, SDL_Window* window) {
-        m_renderer = renderer;  m_window = window; 
+    void PreInit(Engine* engine, SDL_Window* window) {
+        m_window = window; 
         m_engine = engine;
         SetWindowSize((int)GetWindowSize().x, (int)GetWindowSize().y);
     }
@@ -85,7 +86,7 @@ public:
     }
 
    Object* CreateObject() {
-       Object* object = new Object(this, m_renderer);
+       Object* object = new Object(this);
         objects.push_back(object);
         updateLayer();
 
@@ -133,6 +134,7 @@ public:
    void SetWindowSize(const int& w, const int& h) {
     SDL_SetWindowSize(m_window, w, h);
     SDL_SetWindowPosition(m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    Renderer::Get().SetWindowSize(w, h);
 }
 
    virtual void onMouseMove(int x, int y) {}
@@ -147,7 +149,6 @@ public:
 
 private: 
     std::vector<Object*> objects;
-    SDL_Renderer* m_renderer;
     SDL_Window* m_window;
     Engine* m_engine;
 };

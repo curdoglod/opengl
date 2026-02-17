@@ -485,3 +485,9 @@ struct Vector3 {
 inline Vector3 Vector2::toVector3() const {
     return Vector3(x, y, 0);
 }
+
+// ---- World coordinate scale ------------------------------------------------
+// Positions in "engine units" are multiplied by WORLD_UNIT_SCALE to obtain
+// 3D world-space coordinates used by the renderer and camera.
+static constexpr float WORLD_UNIT_SCALE     = 1.0f / 35.0f;
+static constexpr float WORLD_UNIT_SCALE_INV = 35.0f;

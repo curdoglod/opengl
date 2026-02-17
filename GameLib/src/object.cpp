@@ -5,13 +5,12 @@
 #include <typeinfo>
 #include "SceneManager.h"
 
-Object::Object(SceneManager *scene, SDL_Renderer *renderer_) : currentScene(scene), renderer(renderer_)
+Object::Object(SceneManager *scene) : currentScene(scene)
 {
 	deltatime = 0;
 	layer = 0;
 	SetRotation(0);
 	active = true;
-	this->renderer = renderer_;
 }
 
 bool Object::Crossing(Object *obj, const float &x_range, const float &y_range)
@@ -112,27 +111,21 @@ int Object::GetLayer() const
 
 void Object::AddComponent(Component *component)
 {
-
-	if (this)
+	for (auto it = components.begin(); it != components.end();)
 	{
-		for (auto it = components.begin(); it != components.end();)
+		if (typeid(*component) == typeid(**it))
 		{
-			if (typeid(*component) == typeid(**it))
-			{
-				delete *it;
-				it = components.erase(it);
-			}
-			else
-			{
-				++it;
-			}
+			delete *it;
+			it = components.erase(it);
 		}
-		component->setOwner(this);
-		component->Init();
-		components.push_back(component);
+		else
+		{
+			++it;
+		}
 	}
-	else
-		std::cerr << "Object didn't create " << std::endl;
+	component->setOwner(this);
+	component->Init();
+	components.push_back(component);
 }
 
 Component *Object::GetComponent(const std::type_info &ti) const
@@ -180,11 +173,6 @@ void Object::lateUpdate(float deltaTime)
 SceneManager *Object::GetScene() const
 {
 	return currentScene;
-}
-
-SDL_Renderer *Object::GetRenderer() const
-{
-	return renderer;
 }
 
 void Object::UpdateEvents(SDL_Event &event)

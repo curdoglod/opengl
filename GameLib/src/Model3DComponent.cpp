@@ -192,7 +192,7 @@ void Model3DComponent::Init()
 
 glm::mat4 Model3DComponent::ComputeModelMatrix() const
 {
-    glm::vec3 position(object->GetPosition3D().x/35, object->GetPosition3D().y/35, object->GetPosition3D().z/35);
+    glm::vec3 position(object->GetPosition3D().x * WORLD_UNIT_SCALE, object->GetPosition3D().y * WORLD_UNIT_SCALE, object->GetPosition3D().z * WORLD_UNIT_SCALE);
     Vector3 angle = object->GetAngle();
 
     glm::mat4 model = glm::mat4(1.0f);

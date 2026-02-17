@@ -16,7 +16,7 @@ void BoxCollider3D::AutoFitFromModel()
 
     // Rendering uses position scaled by 1/35; physics uses raw object units.
     // Convert visual size (GL units) into engine units by multiplying by 35.
-    static constexpr float kRenderScale = 35.0f;
+    static constexpr float kRenderScale = WORLD_UNIT_SCALE_INV;
 
     Vector3 size = object->GetSize3D();
 

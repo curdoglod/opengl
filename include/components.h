@@ -11,6 +11,7 @@
 #include "BoxCollider3D.h"
 #include "Rigidbody3D.h"
 #include "LightComponent.h"
+#include "InputManager.h"
 #include "BlockComponent.h"
 #include "WorldGridComponent.h"
 #include "PlayerController.h" 

@@ -45,7 +45,6 @@ public:
     void update(float deltaTime);
     void lateUpdate(float deltaTime);
     SceneManager* GetScene() const;
-    SDL_Renderer* GetRenderer() const;
     void UpdateEvents(SDL_Event& event);
     void SetActive(bool status);
     template <typename T>
@@ -59,8 +58,7 @@ public:
     friend class SceneManager;
 private:
     virtual ~Object();
-    Object(SceneManager* _game, SDL_Renderer* renderer_);
-    SDL_Renderer* renderer;
+    Object(SceneManager* _game);
     SceneManager* currentScene;
     std::vector<Component*> components;
     Vector3 position;
