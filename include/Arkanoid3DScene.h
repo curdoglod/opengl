@@ -1,9 +1,9 @@
 #pragma once
 
-#include "SceneManager.h"
+#include "Scene.h"
 #include "components.h"
 
-class Arkanoid3DScene : public SceneManager {
+class Arkanoid3DScene : public Scene {
 public:
     void Init() override;
     void Update() override;

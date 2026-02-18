@@ -3,7 +3,7 @@
 
 #include "component.h"
 #include "sprite.h"
-#include "SceneManager.h"
+#include "Scene.h"
 #include "engine.h"
 
 class Image : public Component

@@ -3,7 +3,7 @@
 
 #include "iostream"
 
-class SceneManager; 
+class Scene;
 class ArchiveUnpacker;
 
 class Engine {
@@ -15,25 +15,29 @@ public:
 
     void Run();
 
-    void ChangeScene(SceneManager* newScene);
+    /// Replace the entire scene stack with `newScene`  (old behaviour).
+    void ChangeScene(Scene* newScene);
 
-    static ArchiveUnpacker* GetDefaultArchive(); 
+    /// Push a scene on top of the stack (previous scene stays alive).
+    void PushScene(Scene* scene);
+
+    /// Pop the top scene and resume the one below.
+    void PopScene();
+
+    static ArchiveUnpacker* GetDefaultArchive();
     static ArchiveUnpacker* GetResourcesArchive();
 
     void SetWindowSize(const int& w, const int& h);
 
     void SetWindowTitle(const std::string& newTitle);
 
-
     void Quit();
 
     void SetFPS(const int& fps);
 
-
 private:
-    class Impl; 
+    class Impl;
     Impl* impl;
-  
 };
 
 #endif // ENGINE_H

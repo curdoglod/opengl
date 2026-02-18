@@ -1,12 +1,12 @@
 #pragma once
 
-#include "SceneManager.h"
+#include "Scene.h"
 #include "components.h"
 
 
 
 
-class MainGameScene :public SceneManager {
+class MainGameScene :public Scene {
 public:
 	void Init() override;
 

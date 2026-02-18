@@ -4,6 +4,7 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <algorithm>
+#include "Scene.h"
 #include "SceneManager.h"
 #include "Renderer.h"
 #include "InputManager.h"
@@ -22,13 +23,11 @@ struct Engine::Impl
         SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
         m_window = SDL_CreateWindow("Game", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-        // m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED);
         SDL_GLContext glContext = SDL_GL_CreateContext(m_window);
         glewExperimental = GL_TRUE;
         if (glewInit() != GLEW_OK)
         {
             std::cerr << "GLEW initialization error!" << std::endl;
-            // error handling
         }
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
@@ -37,10 +36,14 @@ struct Engine::Impl
         glFrontFace(GL_CCW);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     }
 
     void Tick(float deltaTime)
     {
+        // Clean up scenes that were replaced/popped last frame.
+        sceneManager.FlushPending();
+
         int ww, wh;
         SDL_GetWindowSize(m_window, &ww, &wh);
         Renderer::Get().SetWindowSize(ww, wh);
@@ -59,29 +62,26 @@ struct Engine::Impl
                 m_window = nullptr;
             }
 
-            if (currentScene != nullptr)
-                currentScene->UpdateEvents(event);
+            Scene *active = sceneManager.GetActiveScene();
+            if (active != nullptr)
+                active->UpdateEvents(event);
         }
 
-        // SDL_SetRenderDrawColor(m_renderer, 0, 100, 255, 255);
-        // SDL_RenderClear(m_renderer);
-        
         glClearColor(0, 100 / 255.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        if (currentScene != nullptr)
-            currentScene->UpdateScene(deltaTime);
+
+        Scene *active = sceneManager.GetActiveScene();
+        if (active != nullptr)
+            active->UpdateScene(deltaTime);
 
         SDL_GL_SwapWindow(m_window);
-
-        ///  SDL_RenderPresent(m_renderer);
     }
 
     int FPS = 60;
     SDL_Window *m_window = nullptr;
     std::string nameWindow;
 
-    SceneManager *currentScene = nullptr;
-    SceneManager *prevScene = nullptr;
+    SceneManager sceneManager;
 
     static ArchiveUnpacker *DefaultArchive;
     static ArchiveUnpacker *ResourcesArchive;
@@ -107,6 +107,7 @@ Engine::Engine() : impl(new Impl())
 void Engine::Run()
 {
     impl->preInit();
+    impl->sceneManager.Bind(this, impl->m_window);
 
     Init();
 
@@ -157,20 +158,19 @@ void Engine::Run()
 //     }
 // }
 
-void Engine::ChangeScene(SceneManager *newScene)
+void Engine::ChangeScene(Scene *newScene)
 {
+    impl->sceneManager.ReplaceScene(newScene);
+}
 
-    if (impl->currentScene)
-    {
-        if (impl->prevScene)
-            delete impl->prevScene;
-        impl->prevScene = impl->currentScene;
-    }
+void Engine::PushScene(Scene *scene)
+{
+    impl->sceneManager.PushScene(scene);
+}
 
-    impl->currentScene = newScene;
-    impl->currentScene->PreInit(this, impl->m_window);
-    impl->currentScene->Awake();
-    impl->currentScene->Init();
+void Engine::PopScene()
+{
+    impl->sceneManager.PopScene();
 }
 
 ArchiveUnpacker *Engine::GetDefaultArchive()
@@ -208,8 +208,7 @@ Engine::~Engine()
     SDL_DestroyWindow(impl->m_window);
     IMG_Quit();
     SDL_Quit();
-    delete impl->prevScene;
-    delete impl->currentScene;
+    // sceneManager clears all scenes in its own destructor (part of Impl)
     delete impl->DefaultArchive;
     delete impl->ResourcesArchive;
     delete impl;

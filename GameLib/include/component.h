@@ -2,7 +2,7 @@
 #define COMPONENT_H
 #include "Utils.h"
 #include "object.h"
-#include "SceneManager.h"
+#include "Scene.h"
 class Object;
 
 class Component {
@@ -35,6 +35,12 @@ public:
     }
     virtual void onKeyPressed(SDL_Keycode key) {}
     virtual void onKeyReleased(SDL_Keycode key) {}
+
+    // --- Collision callbacks (called by the physics system) ----------------
+    // Solid-vs-solid collision (non-trigger).
+    virtual void OnCollisionEnter(Object* other) {}
+    // Trigger overlap.
+    virtual void OnTriggerEnter(Object* other) {}
 
     virtual Component* Clone() const { return nullptr; }
    

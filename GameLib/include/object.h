@@ -11,7 +11,7 @@
 
 class Component; 
 class Image; 
-class SceneManager; 
+class Scene; 
 
 class Object {
 public:
@@ -44,7 +44,7 @@ public:
   
     void update(float deltaTime);
     void lateUpdate(float deltaTime);
-    SceneManager* GetScene() const;
+    Scene* GetScene() const;
     void UpdateEvents(SDL_Event& event);
     void SetActive(bool status);
     template <typename T>
@@ -54,12 +54,16 @@ public:
     }
     Object* CloneObject() const;
 
+    // Collision notification helpers (called by Scene)
+    void notifyCollisionEnter(Object* other);
+    void notifyTriggerEnter(Object* other);
+
     friend class Engine; 
-    friend class SceneManager;
+    friend class Scene;
 private:
     virtual ~Object();
-    Object(SceneManager* _game);
-    SceneManager* currentScene;
+    Object(Scene* _game);
+    Scene* currentScene;
     std::vector<Component*> components;
     Vector3 position;
     Vector3 size;

@@ -1,7 +1,7 @@
 #include "Rigidbody3D.h"
 #include "BoxCollider3D.h"
 #include "object.h"
-#include "SceneManager.h"
+#include "Scene.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -57,6 +57,10 @@ void Rigidbody3D::resolveCollisions()
         otherCol->AutoFitFromModel();
 
         if (myCol->Overlaps(otherCol)) {
+            // Fire collision callbacks on both objects
+            object->notifyCollisionEnter(otherObj);
+            otherObj->notifyCollisionEnter(object);
+
             Vector3 c1 = myCol->GetCenter();
             Vector3 c2 = otherCol->GetCenter();
             Vector3 e1 = myCol->GetHalfExtents();

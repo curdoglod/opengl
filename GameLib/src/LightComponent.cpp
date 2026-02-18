@@ -1,6 +1,6 @@
 #include "LightComponent.h"
 #include "Renderer.h"
-#include "SceneManager.h"
+#include "Scene.h"
 #include "object.h"
 #include "Model3DComponent.h"
 #include <glm/gtc/matrix_transform.hpp>
@@ -83,7 +83,7 @@ void LightComponent::LateUpdate(float dt)
 {
     (void)dt;
     if (!object) return;
-    SceneManager* scene = object->GetScene();
+    Scene* scene = object->GetScene();
     if (scene) {
         RenderShadowMap(scene);
     }
@@ -115,7 +115,7 @@ void LightComponent::ensureShadowResources()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void LightComponent::computeLightMatrices(SceneManager* scene)
+void LightComponent::computeLightMatrices(Scene* scene)
 {
     // Compute world-space AABB from all scene models
     glm::vec3 wsMin( 1e9f), wsMax(-1e9f);
@@ -206,7 +206,7 @@ void LightComponent::computeLightMatrices(SceneManager* scene)
     lightProj = glm::ortho(lsLeft, lsRight, lsBottom, lsTop, lsNear, lsFar);
 }
 
-void LightComponent::RenderShadowMap(SceneManager* scene)
+void LightComponent::RenderShadowMap(Scene* scene)
 {
     if (!enableShadows || !scene) return;
     ensureShadowResources();
@@ -234,7 +234,7 @@ void LightComponent::RenderShadowMap(SceneManager* scene)
     glViewport(0, 0, Renderer::Get().GetWindowWidth(), Renderer::Get().GetWindowHeight());
 }
 
-LightComponent* LightComponent::FindActive(SceneManager* scene)
+LightComponent* LightComponent::FindActive(Scene* scene)
 {
     if (!scene) return nullptr;
     const auto& objects = scene->GetObjects();

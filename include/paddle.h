@@ -2,7 +2,7 @@
 #include "component.h"
 #include "iostream"
 #include "math.h"
-#include "SceneManager.h"
+#include "Scene.h"
 
 class PaddleComponent : public Component
 {

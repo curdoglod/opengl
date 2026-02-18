@@ -1,8 +1,8 @@
 #pragma once
-#include "SceneManager.h"
+#include "Scene.h"
 #include "components.h"
 
-class StartScene : public SceneManager {
+class StartScene : public Scene {
 
     void Awake() override; 
     void Init() override; 

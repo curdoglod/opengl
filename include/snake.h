@@ -2,7 +2,7 @@
 #include "component.h"
 #include "iostream"
 #include "math.h"
-#include "SceneManager.h"
+#include "Scene.h"
 
 static Vector2 Lerp(const Vector2 &start, const Vector2 &end, float t)
 {

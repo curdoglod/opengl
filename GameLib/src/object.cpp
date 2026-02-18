@@ -3,9 +3,9 @@
 #include "image.h"
 #include "Utils.h"
 #include <typeinfo>
-#include "SceneManager.h"
+#include "Scene.h"
 
-Object::Object(SceneManager *scene) : currentScene(scene)
+Object::Object(Scene *scene) : currentScene(scene)
 {
 	deltatime = 0;
 	layer = 0;
@@ -170,7 +170,7 @@ void Object::lateUpdate(float deltaTime)
 	}
 }
 
-SceneManager *Object::GetScene() const
+Scene *Object::GetScene() const
 {
 	return currentScene;
 }
@@ -198,6 +198,18 @@ void Object::SetActive(bool status)
 {
 
 	active = status;
+}
+
+void Object::notifyCollisionEnter(Object* other)
+{
+	for (auto& comp : components)
+		comp->OnCollisionEnter(other);
+}
+
+void Object::notifyTriggerEnter(Object* other)
+{
+	for (auto& comp : components)
+		comp->OnTriggerEnter(other);
 }
 
 Object *Object::CloneObject() const

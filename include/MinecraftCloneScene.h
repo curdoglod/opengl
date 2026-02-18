@@ -1,8 +1,8 @@
 #pragma once
-#include "SceneManager.h"
+#include "Scene.h"
 #include "components.h"
 
-class MinecraftCloneScene : public SceneManager {
+class MinecraftCloneScene : public Scene {
 public:
     void Init() override;
     void Update() override;

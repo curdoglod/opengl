@@ -2,7 +2,7 @@
 #include "object.h"
 #include "component.h"
 #include "button.h"
-#include "rigidbody.h"
+#include "Rigidbody2D.h"
 #include "sprite.h"
 #include "image.h"
 #include "text.h" 

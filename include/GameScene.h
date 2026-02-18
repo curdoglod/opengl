@@ -2,7 +2,7 @@
 
 
 
-class GameScene :public SceneManager
+class GameScene :public Scene
 {
 public:
 	void Init() override;

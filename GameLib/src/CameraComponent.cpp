@@ -1,5 +1,5 @@
 #include "CameraComponent.h"
-#include "SceneManager.h"
+#include "Scene.h"
 #include "object.h"
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -19,7 +19,7 @@ glm::mat4 CameraComponent::GetProjectionMatrix() const {
     return glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
 }
 
-CameraComponent* CameraComponent::FindActive(SceneManager* scene) {
+CameraComponent* CameraComponent::FindActive(Scene* scene) {
     if (!scene) return nullptr;
     const auto& objects = scene->GetObjects();
     for (auto* obj : objects) {

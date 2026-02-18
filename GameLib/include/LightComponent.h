@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <GL/glew.h>
 
-class SceneManager;
+class Scene;
 
 class LightComponent : public Component {
 public:
@@ -31,13 +31,13 @@ public:
     glm::mat4 GetLightProj() const { return lightProj; }
     glm::mat4 GetLightVP() const { return lightProj * lightView; }
 
-    void RenderShadowMap(SceneManager* scene);
+    void RenderShadowMap(Scene* scene);
 
-    static LightComponent* FindActive(SceneManager* scene);
+    static LightComponent* FindActive(Scene* scene);
 
 private:
     void ensureShadowResources();
-    void computeLightMatrices(SceneManager* scene);
+    void computeLightMatrices(Scene* scene);
 
 private:
     glm::vec3 direction;

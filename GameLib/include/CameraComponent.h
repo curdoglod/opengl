@@ -18,7 +18,7 @@ public:
     glm::mat4 GetProjectionMatrix() const;
 
     // Static access to the first active camera in the scene
-    static CameraComponent* FindActive(SceneManager* scene);
+    static CameraComponent* FindActive(Scene* scene);
 
 private:
     float fov = 60.0f;
