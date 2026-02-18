@@ -64,6 +64,7 @@ uniform vec3 lightDir;      // light direction (world)
 uniform vec3 lightColor;    // light color
 uniform vec3 ambientColor;  // ambient color
 uniform int useShadows;     // 0/1
+uniform vec4 highlightTint; // rgb=tint color, a=mix factor (0=no tint)
 
 float ShadowCalculation(vec4 lightSpacePos, vec3 normal, vec3 lightDirection)
 {
@@ -104,7 +105,8 @@ void main()
     }
 
     vec3 result = texColor * (ambient + (1.0 - shadow) * diffuse);
-    FragColor   = vec4(result.rgb, 1.0);
+    result = mix(result, highlightTint.rgb, highlightTint.a);
+    FragColor   = vec4(result, 1.0);
 }
 )";
 
@@ -272,6 +274,7 @@ void Model3DComponent::Render(const glm::mat4& view, const glm::mat4& projection
     glUniform3fv(ambientColorLoc, 1, glm::value_ptr(ambientColor));
     glUniformMatrix4fv(lightVPLoc, 1, GL_FALSE, glm::value_ptr(lightVP));
     glUniform1i(useShadowsLoc, useShadows);
+    glUniform4fv(glGetUniformLocation(prog, "highlightTint"), 1, glm::value_ptr(highlightTint));
 
     // Bind albedo texture: prefer override if present, otherwise first mesh texture
     for (auto& mesh : meshes) {

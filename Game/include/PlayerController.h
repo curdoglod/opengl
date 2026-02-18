@@ -171,6 +171,9 @@ public:
 			cameraObject->SetPosition(Vector3(pos.x, pos.y + eyeHeight, pos.z));
 			cameraObject->SetRotation(Vector3(pitch, yaw, 0.0f));
 		}
+
+		// ---- Highlight block under crosshair --------------------------------
+		updateHoveredBlock(grid);
 	}
 
 	// --- Input events -------------------------------------------------------
@@ -202,8 +205,10 @@ public:
 				int gx, gy, gz;
 				if (grid->WorldToGrid(currentPos, gx, gy, gz))
 				{
-					if (grid->GetBlock(gx, gy, gz))
+					Object* blk = grid->GetBlock(gx, gy, gz);
+					if (blk)
 					{
+						if (blk == hoveredBlock) hoveredBlock = nullptr;
 						grid->RemoveBlockAt(gx, gy, gz);
 						break;
 					}
@@ -245,6 +250,11 @@ public:
 		}
 	}
 
+	void OnMouseButtonMotion(Vector2 mouse_position) override
+	{
+
+	}
+
 private:
 	// --- Helpers ------------------------------------------------------------
 
@@ -257,6 +267,46 @@ private:
 		float cp = cosf(pitch * toRad);
 		float sp = sinf(pitch * toRad);
 		return Vector3(sy * cp, -sp, -cy * cp);
+	}
+
+	/// Raycast from camera and highlight the first block hit.
+	void updateHoveredBlock(WorldGridComponent* grid)
+	{
+		Object* newHovered = nullptr;
+		if (grid && cameraObject)
+		{
+			Vector3 rayStart = cameraObject->GetPosition3D();
+			Vector3 rayDir   = getLookDirection();
+			float stepSize   = grid->GetBlockSize() * 0.4f;
+			Vector3 currentPos = rayStart;
+			for (int i = 0; i < 40; ++i)
+			{
+				int gx, gy, gz;
+				if (grid->WorldToGrid(currentPos, gx, gy, gz))
+				{
+					if (grid->GetBlock(gx, gy, gz))
+					{
+						newHovered = grid->GetBlock(gx, gy, gz);
+						break;
+					}
+				}
+				currentPos = currentPos + rayDir * stepSize;
+			}
+		}
+		if (newHovered != hoveredBlock)
+		{
+			if (hoveredBlock)
+			{
+				auto* m = hoveredBlock->GetComponent<Model3DComponent>();
+				if (m) m->SetHighlight(false);
+			}
+			hoveredBlock = newHovered;
+			if (hoveredBlock)
+			{
+				auto* m = hoveredBlock->GetComponent<Model3DComponent>();
+				if (m) m->SetHighlight(true);
+			}
+		}
 	}
 
 	/// Find the WorldGridComponent in the scene (cached after first lookup).
@@ -415,4 +465,5 @@ private:
 
 	// Cached references
 	WorldGridComponent *cachedGrid = nullptr;
+	Object *hoveredBlock = nullptr;
 };

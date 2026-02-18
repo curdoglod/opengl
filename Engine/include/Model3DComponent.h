@@ -50,6 +50,14 @@ public:
     void SetAlbedoTexture(GLuint textureId) { overrideAlbedoTexture = textureId; }
     bool SetAlbedoTextureFromFile(const std::string& fullPath);
 
+    // Highlight overlay — call SetHighlight(true) to tint, SetHighlight(false) to clear
+    void SetHighlight(bool enabled,
+                      glm::vec3 color     = glm::vec3(1.0f, 1.0f, 0.4f),
+                      float     intensity = 0.35f)
+    {
+        highlightTint = enabled ? glm::vec4(color, intensity) : glm::vec4(0.0f);
+    }
+
 private:
     bool loadModel(const std::string& path);
     void processNode(struct aiNode* node, const struct aiScene* scene);
@@ -71,5 +79,8 @@ private:
 
     // Optional override for albedo texture
     GLuint overrideAlbedoTexture = 0;
+
+    // Highlight/tint overlay (rgb = color, a = mix factor)
+    glm::vec4 highlightTint = glm::vec4(0.0f);
 };
 
