@@ -14,10 +14,6 @@ void BoxCollider3D::AutoFitFromModel()
     if (!object) return;
     Model3DComponent* model = object->GetComponent<Model3DComponent>();
 
-    // Rendering uses position scaled by 1/35; physics uses raw object units.
-    // Convert visual size (GL units) into engine units by multiplying by 35.
-    static constexpr float kRenderScale = WORLD_UNIT_SCALE_INV;
-
     Vector3 size = object->GetSize3D();
 
     Vector3 dimsUsed;
@@ -47,8 +43,8 @@ void BoxCollider3D::AutoFitFromModel()
                            size.z != 0.0f ? size.z : 1.0f);
     }
 
-    // Convert to engine units and take half-extents
-    halfExtents = dimsUsed * (kRenderScale * 0.5f);
+    // Take half-extents
+    halfExtents = dimsUsed * 0.5f;
 }
 
 bool BoxCollider3D::Overlaps(const BoxCollider3D* other) const

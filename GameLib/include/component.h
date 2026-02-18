@@ -1,8 +1,8 @@
 #ifndef COMPONENT_H
 #define COMPONENT_H
 #include "Utils.h"
-#include "object.h"
-#include "Scene.h"
+#include <SDL.h>
+
 class Object;
 
 class Component {
@@ -18,8 +18,8 @@ public:
     }
 
     // Called after ALL objects have run Update().
-    // Use for rendering or anything that depends on the final state of
-    // other objects this frame (e.g. camera position).
+    // Use for logic that depends on the final state of other objects
+    // this frame (e.g. camera following). Rendering is handled by RenderSystem.
     virtual void LateUpdate(float deltaTime) {
     }
  
@@ -46,12 +46,7 @@ public:
    
 protected:
     Object* object = nullptr;
-    Object* CreateObject()
-    {
-        if(!object) return nullptr;  
-
-        return object->GetScene()->CreateObject();
-    }
+    Object* CreateObject();
 private:
     friend class Object; 
     void setOwner(Object* owner) {

@@ -1,5 +1,7 @@
 #pragma once
 #include "component.h"
+#include "object.h"
+#include "Scene.h"
 #include "BlockComponent.h"
 #include "CameraComponent.h"
 #include <unordered_map>
@@ -178,7 +180,7 @@ private:
 		b->GetComponent<BlockComponent>()->SetType(type);
 		Vector3 pos = GridToWorld(gx, gy, gz);
 		b->SetPosition(pos);
-		b->SetSize(Vector3(1,1,1) * (blockSize * WORLD_UNIT_SCALE));
+		b->SetSize(Vector3(1,1,1) * blockSize);
 		std::string key = keyFor(gx, gy, gz);
 		grid[key] = b;
 		return b;

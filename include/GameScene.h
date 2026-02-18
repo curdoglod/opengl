@@ -1,8 +1,8 @@
 #pragma once
+#include "Scene.h"
+#include "components.h"
 
-
-
-class GameScene :public Scene
+class GameScene : public Scene
 {
 public:
 	void Init() override;

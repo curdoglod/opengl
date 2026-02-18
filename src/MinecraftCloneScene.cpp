@@ -26,19 +26,19 @@ void MinecraftCloneScene::Init()
     world = CreateObject();
     grid = new WorldGridComponent();
     grid->SetSize(24, 24);
-    grid->SetBlockSize(20.0f);
+    grid->SetBlockSize(20.0f / 35.0f);
     world->AddComponent(grid);
     grid->GenerateHillyTerrain(1, 1, BlockType::Dirt, BlockType::Stone);
 
     // ---- Player (invisible body + first-person camera controller) ---------
     Object* player = CreateObject();
-    player->SetPosition(Vector3(0.0f, 60.0f, 0.0f));
+    player->SetPosition(Vector3(0.0f, 60.0f / 35.0f, 0.0f));
     auto* pc = new PlayerController();
-    pc->SetMoveSpeed(160.0f);
+    pc->SetMoveSpeed(160.0f / 35.0f);
     pc->SetCamera(camObj);
-    pc->SetEyeHeight(25.0f);
-    pc->SetGravity(-600.0f);
-    pc->SetJumpSpeed(220.0f);
+    pc->SetEyeHeight(25.0f / 35.0f);
+    pc->SetGravity(-600.0f / 35.0f);
+    pc->SetJumpSpeed(220.0f / 35.0f);
     pc->SetMouseSensitivity(0.20f);
 
     player->AddComponent(pc);

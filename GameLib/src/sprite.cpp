@@ -130,12 +130,10 @@ void Sprite::draw() {
 }
 
 void Sprite::draw(const Vector2& pos, float angle) {
-    glDisable(GL_DEPTH_TEST);
     // Update position and angle
     posX = static_cast<int>(pos.x);
     posY = static_cast<int>(pos.y);
     rotation = angle;
-    //glDisable(GL_DEPTH_TEST);
     GLuint prog = ResourceManager::Get().GetOrCreateShader("sprite", vertexShaderSource, fragmentShaderSource);
     glUseProgram(prog);
 

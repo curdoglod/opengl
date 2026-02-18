@@ -1,5 +1,7 @@
 #include "text.h"
+#include "object.h"
 #include "Renderer.h"
+#include "ArchiveUnpacker.h"
 #include "ResourceManager.h"
 #include <GL/glew.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -233,14 +235,9 @@ void TextComponent::setAlignment(TextAlignment newAlignment)
     alignment = newAlignment;
 }
 
-// ============================ Update (render) ============================
-void TextComponent::Update(float dt)
-{
-    (void)dt;
-    // Logic only — rendering moved to LateUpdate
-}
 
-void TextComponent::LateUpdate(float dt)
+
+void TextComponent::Render()
 {
     glDisable(GL_DEPTH_TEST);
     // Nothing to draw if texture or VAO is missing
@@ -250,17 +247,15 @@ void TextComponent::LateUpdate(float dt)
     // For simplicity, take position and angle from object
     float angle = object->GetAngle().z;
     Vector2 pos = object->GetPosition();
-    Vector2 size = object->GetSize(); // Commonly used for background etc.
+    Vector2 size = object->GetSize();
 
     // Compute model matrix
     glm::mat4 model(1.0f);
 
-    // 1. Translation to position
     // Horizontal alignment:
     switch (alignment)
     {
     case TextAlignment::LEFT:
-        // nothing extra
         break;
     case TextAlignment::CENTER:
         pos.x += (size.x * 0.5f) - (textWidth * 0.5f);
@@ -272,22 +267,16 @@ void TextComponent::LateUpdate(float dt)
     // Vertically center within object
     pos.y += (size.y * 0.5f) - (textHeight * 0.5f);
 
-    // Apply final translation
     model = glm::translate(model, glm::vec3(pos.x, pos.y, 0.0f));
 
-    // 2. Rotate text around its center
     model = glm::translate(model, glm::vec3(textWidth * 0.5f, textHeight * 0.5f, 0.0f));
     model = glm::rotate(model, glm::radians(angle), glm::vec3(0, 0, 1));
     model = glm::translate(model, glm::vec3(-textWidth * 0.5f, -textHeight * 0.5f, 0.0f));
 
-    // 3. Scale to text size
     model = glm::scale(model, glm::vec3(textWidth, textHeight, 1.0f));
 
-    // Orthographic projection (example)
-    // Depends on what you use:
     glm::mat4 projection = Renderer::Get().GetOrthoProjection();
 
-    // Render
     GLuint prog = ResourceManager::Get().GetOrCreateShader("text", vertexShaderSource, fragmentShaderSource);
     glUseProgram(prog);
 
@@ -296,22 +285,18 @@ void TextComponent::LateUpdate(float dt)
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-    // Color (if changing dynamically)
     GLint colorLoc = glGetUniformLocation(prog, "textColor");
     glUniform4f(colorLoc, color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
 
-    // Bind texture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureID);
     GLint texLoc = glGetUniformLocation(prog, "textTexture");
     glUniform1i(texLoc, 0);
 
-    // Draw quad
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
-    // Cleanup
     glBindTexture(GL_TEXTURE_2D, 0);
     glUseProgram(0);
 }

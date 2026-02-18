@@ -1,14 +1,17 @@
 #pragma once
 #include "component.h"
-#include "iostream"
-#include "math.h"
+#include "object.h"
 #include "Scene.h"
+#include "engine.h"
+#include "image.h"
+#include <iostream>
+#include <cmath>
 
 class PaddleComponent : public Component
 {
 public:
   
-    void Init()
+    void Init() override
     {
         windowSize = object->GetScene()->GetWindowSize();
         std::vector<unsigned char> paddleImgData = Engine::GetResourcesArchive()->GetFile("paddle.png");

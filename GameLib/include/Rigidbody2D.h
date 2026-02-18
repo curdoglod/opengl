@@ -1,5 +1,6 @@
 #pragma once
 #include "component.h"
+#include "object.h"
 #include "Utils.h"
 
 class Rigidbody2D : public Component {

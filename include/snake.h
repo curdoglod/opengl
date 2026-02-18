@@ -1,8 +1,11 @@
 #pragma once
 #include "component.h"
-#include "iostream"
-#include "math.h"
+#include "object.h"
 #include "Scene.h"
+#include "engine.h"
+#include "image.h"
+#include <iostream>
+#include <cmath>
 
 static Vector2 Lerp(const Vector2 &start, const Vector2 &end, float t)
 {

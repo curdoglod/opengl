@@ -11,7 +11,7 @@ void StartScene::Init()
     my3DObject->AddComponent(new Model3DComponent("Assets/model.fbx"));
 
     // Set position and size (scale)
-    my3DObject->SetPosition(Vector3(50, 10, 100));
+    my3DObject->SetPosition(Vector3(50.0f / 35.0f, 10.0f / 35.0f, 100.0f / 35.0f));
     //my3DObject->SetSize(Vector2(1, 1)); // scale 1:1
     my3DObject->SetRotation(Vector3(-90,0,0)); 
     my3DObject->SetLayer(200); 

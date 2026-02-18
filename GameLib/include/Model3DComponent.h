@@ -27,9 +27,7 @@ public:
     Model3DComponent(const std::string& modelPath);
     virtual ~Model3DComponent();
 
-    virtual void Init() override;   
-    virtual void Update(float dt) override;
-    virtual void LateUpdate(float dt) override;
+    virtual void Init() override;
 
     // Interpret Object::size as scale factors relative to imported dimensions
     void SetSizeIsRelative(bool enabled) { sizeIsRelative = enabled; }
@@ -44,6 +42,9 @@ public:
     // Helpers for lighting/shadows
     glm::mat4 ComputeModelMatrix() const;
     void RenderDepthPass(const glm::mat4& model, GLuint depthProgram) const;
+
+    /// Called by RenderSystem — renders the model with the given camera and light.
+    void Render(const glm::mat4& view, const glm::mat4& projection, class LightComponent* light);
 
     // Override albedo/diffuse texture from code
     void SetAlbedoTexture(GLuint textureId) { overrideAlbedoTexture = textureId; }

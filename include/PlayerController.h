@@ -1,5 +1,7 @@
 #pragma once
 #include "component.h"
+#include "object.h"
+#include "Scene.h"
 #include "Utils.h"
 #include "BlockComponent.h"
 #include "WorldGridComponent.h"
@@ -26,16 +28,16 @@
 class PlayerController : public Component {
 public:
 	PlayerController()
-		: moveSpeed(120.0f)
+		: moveSpeed(120.0f / 35.0f)
 		, cameraObject(nullptr)
-		, eyeHeight(30.0f)
+		, eyeHeight(30.0f / 35.0f)
 		, yaw(0.0f)
 		, pitch(0.0f)
 		, mouseSensitivity(0.15f)
 		, velocityY(0.0f)
-		, gravity(-600.0f)
+		, gravity(-600.0f / 35.0f)
 		, isGrounded(false)
-		, jumpSpeed(220.0f)
+		, jumpSpeed(220.0f / 35.0f)
 	{}
 
 	// --- Setup helpers (call before adding to Object) -----------------------

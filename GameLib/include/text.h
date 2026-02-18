@@ -4,6 +4,7 @@
 #include "component.h"
 #include <SDL.h>
 #include <SDL_ttf.h>
+#include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
@@ -32,9 +33,10 @@ public:
     void setColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255) { setColor(Color(r, g, b, a)); }
     void setAlignment(TextAlignment newAlignment);
 
-    virtual void Init() override;       
-    virtual void Update(float dt) override; 
-    virtual void LateUpdate(float dt) override;
+    virtual void Init() override;
+
+    /// Called by RenderSystem — performs the actual OpenGL draw.
+    void Render();
 
     virtual TextComponent* Clone() const override {
         return new TextComponent(fontSize, text, color, alignment);

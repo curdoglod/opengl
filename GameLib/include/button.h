@@ -2,6 +2,7 @@
 #define BUTTON_H
 
 #include "component.h"
+#include "object.h"
 #include <functional>
 #include <SDL.h>
 #include "image.h"
@@ -44,7 +45,7 @@ public:
         }
     }
 
-    void OnMouseButtonUp(Vector2 mouse_position)
+    void OnMouseButtonUp(Vector2 mouse_position) override
     {
         if (mouse_position.x >= pos.x && mouse_position.x <= pos.x + size.x &&
             mouse_position.y >= pos.y && mouse_position.y <= pos.y + size.y)

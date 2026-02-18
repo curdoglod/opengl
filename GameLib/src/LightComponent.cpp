@@ -71,24 +71,6 @@ void main(){ }
     ensureShadowResources();
 }
 
-void LightComponent::Update(float dt)
-{
-    (void)dt;
-    // Logic-only pass — nothing to do here.
-    // Shadow map rendering is done in LateUpdate so that the camera
-    // position is finalised before we build the depth buffer.
-}
-
-void LightComponent::LateUpdate(float dt)
-{
-    (void)dt;
-    if (!object) return;
-    Scene* scene = object->GetScene();
-    if (scene) {
-        RenderShadowMap(scene);
-    }
-}
-
 void LightComponent::ensureShadowResources()
 {
     if (!enableShadows) return;
@@ -214,6 +196,7 @@ void LightComponent::RenderShadowMap(Scene* scene)
 
     glViewport(0,0,shadowWidth,shadowHeight);
     glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
+    glEnable(GL_DEPTH_TEST);
     glClear(GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(depthProgram);

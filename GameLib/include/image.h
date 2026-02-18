@@ -2,9 +2,11 @@
 #define IMAGE_H
 
 #include "component.h"
+#include "object.h"
 #include "sprite.h"
 #include "Scene.h"
 #include "engine.h"
+#include "ArchiveUnpacker.h"
 
 class Image : public Component
 {
@@ -47,17 +49,12 @@ public:
             object->InitSize(this);
         }
     }
-    void Update(float deltaTime) override
-    {
-        // Logic only — rendering moved to LateUpdate
-    }
-
-    void LateUpdate(float deltaTime) override
+    /// Called by RenderSystem — performs the actual OpenGL draw.
+    void Render()
     {
         if (sprite != nullptr)
         {
-            // Keep sprite size in sync with object size so that
-            // object->SetSize() works as expected (like it did in 2D/SDL).
+            // Keep sprite size in sync with object size
             Vector2 objSize = object->GetSize();
             if (objSize.x > 0 && objSize.y > 0) {
                 sprite->setSize((int)objSize.x, (int)objSize.y);

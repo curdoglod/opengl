@@ -9,7 +9,7 @@ void Arkanoid3DScene::Init()
     cameraObj->AddComponent(new CameraComponent());
     auto* cam = cameraObj->GetComponent<CameraComponent>();
     cam->SetPerspective(60.0f, windowSize.x / windowSize.y, 0.1f, 100.0f);
-    cameraObj->SetPosition(Vector3(0.0f, 120.0f, 78.0f));
+    cameraObj->SetPosition(Vector3(0.0f, 120.0f / 35.0f, 78.0f / 35.0f));
     cameraObj->SetRotation(Vector3(30.0f, 0.0f, 0.0f));
 
     // Directional light
@@ -25,8 +25,8 @@ void Arkanoid3DScene::Init()
     board = CreateObject();
     board->AddComponent(new Model3DComponent("Assets/board.fbx"));
     board->GetComponent<Model3DComponent>()->SetAlbedoTextureFromFile("Assets/block_textures/grass.png");
-    board->SetPosition(Vector3(0.0f, -1.5f, 0.0f));
-    board->SetSize(Vector3(2,1,1)/200);
+    board->SetPosition(Vector3(0.0f, -1.5f / 35.0f, 0.0f));
+    board->SetSize(Vector3(2,1,1) / 200.0f);
     board->SetRotation(Vector3(0.0f, 90.0f, 0.0f));
     board->SetLayer(100);
     auto* boardCol = new BoxCollider3D();
@@ -35,13 +35,13 @@ void Arkanoid3DScene::Init()
 
     ball = CreateObject();
     ball->AddComponent(new Model3DComponent("Assets/ball.fbx"));
-    ball->SetPosition(Vector3(0.0f, 30.0f, 0.0f));
-    ball->SetSize(Vector3(1.0f, 1.0f,1.0f)/100);
+    ball->SetPosition(Vector3(0.0f, 30.0f / 35.0f, 0.0f));
+    ball->SetSize(Vector3(1.0f, 1.0f, 1.0f) / 100.0f);
     ball->SetRotation(Vector3(-90.0f, 0.0f, 0.0f));
     ball->SetLayer(120);
     ball->AddComponent(new BoxCollider3D());
     auto* rb = new Rigidbody3D();
-    rb->SetGravity(-29.81f);
+    rb->SetGravity(-29.81f / 35.0f);
     rb->SetVelocity(Vector3(0, 0, 0));
     ball->AddComponent(rb);
 }
@@ -57,7 +57,7 @@ void Arkanoid3DScene::Update()
         if (ballCol->Overlaps(boardCol)) {
             Vector3 vel = rb->GetVelocity();
             if (vel.y < 0) {
-                vel.y = 40;
+                vel.y = 40.0f / 35.0f;
                 rb->SetVelocity(vel);
                 Vector3 pos = ball->GetPosition3D();
                 Vector3 bPos = board->GetPosition3D();
@@ -74,17 +74,18 @@ void Arkanoid3DScene::Update()
 
 void Arkanoid3DScene::onKeyPressed(SDL_Keycode key)
 {
-    int k = 4 ;
+    int k = 4;
+    float step = k / 35.0f;
     if (key == SDLK_w) {
-        board->SetPosition(board->GetPosition3D()+Vector3(0,0,-1)*k);
+        board->SetPosition(board->GetPosition3D()+Vector3(0,0,-1)*step);
     }
     if (key == SDLK_s) {
-        board->SetPosition(board->GetPosition3D()+Vector3(0,0,1)*k);
+        board->SetPosition(board->GetPosition3D()+Vector3(0,0,1)*step);
     }
     if (key == SDLK_a) {
-        board->SetPosition(board->GetPosition3D()+Vector3(-1,0,0)*k);
+        board->SetPosition(board->GetPosition3D()+Vector3(-1,0,0)*step);
     }
     if (key == SDLK_d) {
-        board->SetPosition(board->GetPosition3D()+Vector3(1,0,0)*k);
+        board->SetPosition(board->GetPosition3D()+Vector3(1,0,0)*step);
     }
 }

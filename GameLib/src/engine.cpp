@@ -9,6 +9,8 @@
 #include "Renderer.h"
 #include "InputManager.h"
 #include "ResourceManager.h"
+#include "ArchiveUnpacker.h"
+#include "RenderSystem.h"
 #include <chrono>
 #include <GL/glew.h>
 
@@ -75,6 +77,11 @@ struct Engine::Impl
         if (active != nullptr)
             active->UpdateScene(deltaTime);
 
+        // Render all objects via the centralised RenderSystem
+        active = sceneManager.GetActiveScene();
+        if (active != nullptr)
+            RenderSystem::Render(active);
+
         SDL_GL_SwapWindow(m_window);
     }
 
@@ -133,31 +140,6 @@ void Engine::Run()
         }
     }
 }
-
-// void Engine::Run() {
-//     preInit();
-//     init();
-//
-//
-//      int frameDelay = 1000 / FPS;
-//
-//     Uint32 frameStart;
-//     int frameTime=0.0001;
-//
-//     while (m_window != nullptr) {
-//         frameStart = SDL_GetTicks();
-//         int frameDelay = 1000 / FPS;
-//
-//         Tick(frameTime / 1000.0f);
-//
-//
-//         frameTime = SDL_GetTicks() - frameStart;
-//
-//         if (frameDelay > frameTime) {
-//             SDL_Delay(frameDelay - frameTime);
-//         }
-//     }
-// }
 
 void Engine::ChangeScene(Scene *newScene)
 {

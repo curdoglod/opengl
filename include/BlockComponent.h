@@ -1,5 +1,6 @@
 #pragma once
 #include "component.h"
+#include "object.h"
 #include "Model3DComponent.h"
 #include "BoxCollider3D.h"
 

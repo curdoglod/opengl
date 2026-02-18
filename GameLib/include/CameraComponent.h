@@ -2,10 +2,11 @@
 #include "component.h"
 #include <glm/glm.hpp>
 
+class Scene;
+
 class CameraComponent : public Component {
 public:
-    void Init() override {}
-    void Update(float dt) override {}
+
 
     // Camera parameters
     void SetPerspective(float fovDeg, float aspect, float nearZ, float farZ) {

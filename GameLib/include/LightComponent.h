@@ -11,8 +11,6 @@ public:
     ~LightComponent();
 
     void Init() override;
-    void Update(float dt) override;
-    void LateUpdate(float dt) override;
 
     void SetDirection(const glm::vec3& dir) { direction = glm::normalize(dir); }
     void SetColor(const glm::vec3& col) { color = col; }

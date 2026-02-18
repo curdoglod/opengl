@@ -2,10 +2,7 @@
 #define OBJECT_H
 
 #include <SDL.h>
-#include <iostream>
 #include <vector>
-#include "sprite.h"
-#include "engine.h"
 #include "Utils.h"
 
 
@@ -47,6 +44,7 @@ public:
     Scene* GetScene() const;
     void UpdateEvents(SDL_Event& event);
     void SetActive(bool status);
+    bool IsActive() const { return active; }
     template <typename T>
     T* GetComponent() const {
         Component* comp = this->GetComponent(typeid(T));

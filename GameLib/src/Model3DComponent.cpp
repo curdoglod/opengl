@@ -1,17 +1,14 @@
 #include "Model3DComponent.h"
-#include "engine.h"  // Access to archives if needed
+#include "object.h"
 #include "ResourceManager.h"
-#include "Renderer.h"
+#include "LightComponent.h"
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <SDL.h>
-#include <SDL_image.h>
 #include <iostream>
-#include "CameraComponent.h"
-#include "LightComponent.h"
 
 // ==================== Shaders (Lambert lighting + basic shadows) ====================
 static const char* vertexShaderSource = R"(
@@ -147,7 +144,8 @@ void Model3DComponent::Init()
 
 glm::mat4 Model3DComponent::ComputeModelMatrix() const
 {
-    glm::vec3 position(object->GetPosition3D().x * WORLD_UNIT_SCALE, object->GetPosition3D().y * WORLD_UNIT_SCALE, object->GetPosition3D().z * WORLD_UNIT_SCALE);
+    Vector3 p = object->GetPosition3D();
+    glm::vec3 position(p.x, p.y, p.z);
     Vector3 angle = object->GetAngle();
 
     glm::mat4 model = glm::mat4(1.0f);
@@ -206,42 +204,28 @@ bool Model3DComponent::SetAlbedoTextureFromFile(const std::string& fullPath)
     return true;
 }
 
-// ==================== Update: no-op (rendering moved to LateUpdate) ====================
-void Model3DComponent::Update(float dt)
-{
-    (void)dt;
+// Returns a 1×1 white texture used as a fallback when no shadow map is available.
+// This prevents the GPU driver from warning about an unbound sampler on unit 1.
+// We use GL_RED (not GL_DEPTH_COMPONENT) because macOS's OpenGL driver may reject
+// incomplete depth textures bound to a regular sampler2D.
+static GLuint getDummyShadowMap() {
+    static GLuint dummy = 0;
+    if (dummy == 0) {
+        glGenTextures(1, &dummy);
+        glBindTexture(GL_TEXTURE_2D, dummy);
+        unsigned char white = 255;
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1, 1, 0, GL_RED, GL_UNSIGNED_BYTE, &white);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    return dummy;
 }
 
-// ==================== LateUpdate: Render model (runs after all logic updates) ===========
-void Model3DComponent::LateUpdate(float dt)
+// ==================== Render: called by RenderSystem ==========================
+void Model3DComponent::Render(const glm::mat4& view, const glm::mat4& projection, LightComponent* light)
 {
-    glEnable(GL_DEPTH_TEST);
-
     glm::mat4 model = ComputeModelMatrix();
-
-    // View/Projection from camera component if present
-    glm::mat4 view;
-    glm::mat4 projection;
-    if (object && object->GetScene()) {
-        if (auto* cam = CameraComponent::FindActive(object->GetScene())) {
-            view = cam->GetViewMatrix();
-            projection = cam->GetProjectionMatrix();
-        } else {
-            // Default camera
-            view = glm::lookAt(
-                glm::vec3(0.0f, 0.0f, 5.0f),
-                glm::vec3(0.0f, 0.0f, 0.0f),
-                glm::vec3(0.0f, 1.0f, 0.0f)
-            );
-            projection = glm::perspective(
-                glm::radians(60.0f),
-                static_cast<float>(Renderer::Get().GetWindowWidth()) /
-                static_cast<float>(Renderer::Get().GetWindowHeight()),
-                0.1f,
-                100.0f
-            );
-        }
-    }
 
     GLuint prog = ResourceManager::Get().GetOrCreateShader("model3d", vertexShaderSource, fragmentShaderSource);
     glUseProgram(prog);
@@ -254,28 +238,29 @@ void Model3DComponent::LateUpdate(float dt)
     glUniformMatrix4fv(viewLoc,  1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projLoc,  1, GL_FALSE, glm::value_ptr(projection));
 
-    // Lighting parameters from LightComponent if present
+    // Lighting parameters
     glm::vec3 lightDir(0.0f, 0.0f, -1.0f);
     glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
     glm::vec3 ambientColor(0.2f, 0.2f, 0.2f);
     glm::mat4 lightVP(1.0f);
     int useShadows = 0;
 
-    if (object && object->GetScene()) {
-        if (auto* light = LightComponent::FindActive(object->GetScene())) {
-            lightDir = light->GetDirection();
-            lightColor = light->GetColor();
-            ambientColor = light->GetAmbient();
-            lightVP = light->GetLightVP();
-            useShadows = light->IsShadowEnabled() && (light->GetDepthTexture() != 0) ? 1 : 0;
-
-            if (useShadows) {
-                glActiveTexture(GL_TEXTURE1);
-                glBindTexture(GL_TEXTURE_2D, light->GetDepthTexture());
-                glUniform1i(glGetUniformLocation(prog, "shadowMap"), 1);
-            }
-        }
+    if (light) {
+        lightDir = light->GetDirection();
+        lightColor = light->GetColor();
+        ambientColor = light->GetAmbient();
+        lightVP = light->GetLightVP();
+        useShadows = light->IsShadowEnabled() && (light->GetDepthTexture() != 0) ? 1 : 0;
     }
+
+    // Always bind a valid texture to unit 1 so the sampler is never unbound.
+    // Use the real shadow map when available, otherwise a 1×1 dummy depth texture.
+    GLuint shadowTex = (light && light->GetDepthTexture() != 0)
+                       ? light->GetDepthTexture()
+                       : getDummyShadowMap();
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, shadowTex);
+    glUniform1i(glGetUniformLocation(prog, "shadowMap"), 1);
 
     GLint lightDirLoc     = glGetUniformLocation(prog, "lightDir");
     GLint lightColorLoc   = glGetUniformLocation(prog, "lightColor");
@@ -428,9 +413,6 @@ void Model3DComponent::processMesh(aiMesh* mesh, const aiScene* scene)
     // Load diffuse textures (or baseColor if needed)
     if (mesh->mMaterialIndex >= 0) {
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-        // std::cout << "Material index " << mesh->mMaterialIndex
-        //           << " has " << material->GetTextureCount(aiTextureType_DIFFUSE)
-        //           << " diffuse textures\n";
         std::vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
         entry.textures.insert(entry.textures.end(), diffuseMaps.begin(), diffuseMaps.end());
     }
