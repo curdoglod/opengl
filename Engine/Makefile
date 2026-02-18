@@ -1,15 +1,15 @@
 UNAME := $(shell uname)
 ifeq ($(UNAME), Darwin)
     CC = clang++
-    CFLAGS = -std=c++17 -Iinclude -IGameLib/include -I/opt/homebrew/include `sdl2-config --cflags` `pkg-config --cflags SDL2_ttf SDL2_image glew assimp`
+    CFLAGS = -std=c++17 -Iinclude -I/opt/homebrew/include `sdl2-config --cflags` `pkg-config --cflags SDL2_ttf SDL2_image glew assimp`
     LDFLAGS = `sdl2-config --libs` `pkg-config --libs SDL2_ttf SDL2_image glew assimp`
 else
     CC = g++
-    CFLAGS = -std=c++17 -DGLEW_STATIC -Iinclude -IGameLib/include `sdl2-config --cflags` `pkg-config --cflags SDL2_ttf SDL2_image glew assimp`
+    CFLAGS = -std=c++17 -DGLEW_STATIC -Iinclude `sdl2-config --cflags` `pkg-config --cflags SDL2_ttf SDL2_image glew assimp`
     LDFLAGS = `sdl2-config --libs` `pkg-config --libs SDL2_ttf SDL2_image glew assimp` -lGLEW -lGL
 endif
 
-LIB_NAME = libGameLib.a
+LIB_NAME = libEngine.a
 SRC = $(wildcard src/*.cpp)
 OBJDIR = obj
 OBJ = $(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))

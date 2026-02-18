@@ -3,7 +3,7 @@
 /.vscode
 
 # Executable
-game
+game_app
 
 # Object files
 *.o

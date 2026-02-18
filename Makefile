@@ -1,51 +1,22 @@
-UNAME := $(shell uname)
-ifeq ($(UNAME), Darwin)
-    CC = clang++
-    CFLAGS = -std=c++17 -Iinclude -IGameLib/include -I/opt/homebrew/include `sdl2-config --cflags` `pkg-config --cflags SDL2_ttf SDL2_image glew assimp`
-    LIBS = -LGameLib -lGameLib -L/opt/homebrew/lib `sdl2-config --libs` `pkg-config --libs SDL2_ttf SDL2_image glew assimp` -framework OpenGL
-else
-    CC = g++
-    CFLAGS = -std=c++17 -Iinclude -IGameLib/include `sdl2-config --cflags` `pkg-config --cflags SDL2_ttf SDL2_image assimp`
-    LIBS = -LGameLib -lGameLib `sdl2-config --libs` `pkg-config --libs SDL2_ttf SDL2_image assimp` -lGLEW -lGL
-endif
+.PHONY: all game clean clean_engine clean_game clean_all re run
 
-TARGET = game
-LIB_NAME = GameLib/libGameLib.a
+all:
+	cd Engine && $(MAKE)
+	cd Game   && $(MAKE)
+game: 
+	cd Game && $(MAKE)
 
-SRC = $(wildcard src/*.cpp)
-OBJDIR = obj
-OBJ = $(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))
+clean_engine:
+	cd Engine && $(MAKE) clean
 
-AR = ar rcs
+clean_game:
+	cd Game && $(MAKE) clean
 
-.PHONY: all clean clean_lib clean_all re re_fast re_full
+clean: clean_game
 
-all: $(LIB_NAME) $(TARGET)
+clean_all: clean_engine clean_game
 
-$(LIB_NAME):
-	cd GameLib && $(MAKE)
+re: clean_all all
 
-$(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o $(TARGET) $(LIBS)
-
-$(OBJDIR)/%.o: src/%.cpp | $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OBJDIR):
-	mkdir -p $(OBJDIR)
-
-
-clean:
-	rm -f $(OBJDIR)/*.o $(TARGET)
-	rm -rf $(OBJDIR)
-
-clean_lib:
-	cd GameLib && $(MAKE) clean
-
-clean_all: clean clean_lib
-
-re_full: clean_all all
-
-re_fast: clean $(TARGET)
-
-re: re_full
+run: all
+	./game_app
