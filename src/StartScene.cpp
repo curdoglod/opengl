@@ -15,14 +15,14 @@ void StartScene::Init()
     //my3DObject->SetSize(Vector2(1, 1)); // scale 1:1
     my3DObject->SetRotation(Vector3(-90,0,0)); 
     my3DObject->SetLayer(200); 
-    Vector2 windowSize(800, 480);
+    Vector2 windowSize(1280, 720);
     SetWindowSize(windowSize.x, windowSize.y);
     glViewport(0, 0, windowSize.x, windowSize.y);
     UIdraw();
 }
 void StartScene::UIdraw()
 {
-    Vector2 windowSize(800, 480);
+    Vector2 windowSize(1280, 720);
 
     Object *background = CreateObject();
     background->AddComponent(new Image(Engine::GetResourcesArchive()->GetFile("block_sgreen.png")));

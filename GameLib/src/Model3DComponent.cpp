@@ -1,5 +1,7 @@
 #include "Model3DComponent.h"
 #include "engine.h"  // Access to archives if needed
+#include "ResourceManager.h"
+#include "Renderer.h"
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -109,49 +111,6 @@ void main()
 }
 )";
 
-// ==================== Static shader variable ====================
-GLuint Model3DComponent::shaderProgram = 0;
-
-// Helper to compile shader
-static GLuint compileShader(GLenum type, const char* src)
-{
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &src, nullptr);
-    glCompileShader(shader);
-
-    GLint success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char infoLog[512];
-        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        std::cerr << "Shader compilation error: " << infoLog << std::endl;
-    }
-    return shader;
-}
-
-// Link shader program
-GLuint Model3DComponent::loadShaderProgram()
-{
-    GLuint vs = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
-    GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
-
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vs);
-    glAttachShader(program, fs);
-    glLinkProgram(program);
-
-    GLint success;
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success) {
-        char infoLog[512];
-        glGetProgramInfoLog(program, 512, nullptr, infoLog);
-        std::cerr << "Shader program link error: " << infoLog << std::endl;
-    }
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    return program;
-}
-
 // ==================== Constructor/Destructor ====================
 Model3DComponent::Model3DComponent(const std::string& modelPath)
     : modelPath(modelPath)
@@ -174,10 +133,6 @@ void Model3DComponent::Init()
     // Load model
     if (!loadModel(modelPath)) {
         std::cerr << "Failed to load model: " << modelPath << std::endl;
-    }
-    // Load shader if not yet loaded
-    if (shaderProgram == 0) {
-        shaderProgram = loadShaderProgram();
     }
     // If object size not set by user, default to native Blender-imported dimensions
     if (aabbComputed) {
@@ -245,33 +200,9 @@ void Model3DComponent::RenderDepthPass(const glm::mat4& model, GLuint depthProgr
 
 bool Model3DComponent::SetAlbedoTextureFromFile(const std::string& fullPath)
 {
-    SDL_Surface* surface = IMG_Load(fullPath.c_str());
-    if (!surface) {
-        std::cerr << "Failed to load texture (override): " << IMG_GetError() << std::endl;
-        return false;
-    }
-    SDL_Surface* converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
-    SDL_FreeSurface(surface);
-    if (!converted) {
-        std::cerr << "Failed to convert surface to RGBA32" << std::endl;
-        return false;
-    }
-
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, converted->w, converted->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, converted->pixels);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    SDL_FreeSurface(converted);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    overrideAlbedoTexture = textureID;
+    GLuint id = ResourceManager::Get().LoadTexture(fullPath);
+    if (id == 0) return false;
+    overrideAlbedoTexture = id;
     return true;
 }
 
@@ -304,19 +235,21 @@ void Model3DComponent::LateUpdate(float dt)
             );
             projection = glm::perspective(
                 glm::radians(60.0f),
-                800.0f / 480.0f,
+                static_cast<float>(Renderer::Get().GetWindowWidth()) /
+                static_cast<float>(Renderer::Get().GetWindowHeight()),
                 0.1f,
                 100.0f
             );
         }
     }
 
-    glUseProgram(shaderProgram);
+    GLuint prog = ResourceManager::Get().GetOrCreateShader("model3d", vertexShaderSource, fragmentShaderSource);
+    glUseProgram(prog);
 
     // Upload matrices
-    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-    GLint viewLoc  = glGetUniformLocation(shaderProgram, "view");
-    GLint projLoc  = glGetUniformLocation(shaderProgram, "projection");
+    GLint modelLoc = glGetUniformLocation(prog, "model");
+    GLint viewLoc  = glGetUniformLocation(prog, "view");
+    GLint projLoc  = glGetUniformLocation(prog, "projection");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(viewLoc,  1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projLoc,  1, GL_FALSE, glm::value_ptr(projection));
@@ -339,16 +272,16 @@ void Model3DComponent::LateUpdate(float dt)
             if (useShadows) {
                 glActiveTexture(GL_TEXTURE1);
                 glBindTexture(GL_TEXTURE_2D, light->GetDepthTexture());
-                glUniform1i(glGetUniformLocation(shaderProgram, "shadowMap"), 1);
+                glUniform1i(glGetUniformLocation(prog, "shadowMap"), 1);
             }
         }
     }
 
-    GLint lightDirLoc     = glGetUniformLocation(shaderProgram, "lightDir");
-    GLint lightColorLoc   = glGetUniformLocation(shaderProgram, "lightColor");
-    GLint ambientColorLoc = glGetUniformLocation(shaderProgram, "ambientColor");
-    GLint lightVPLoc      = glGetUniformLocation(shaderProgram, "lightVP");
-    GLint useShadowsLoc   = glGetUniformLocation(shaderProgram, "useShadows");
+    GLint lightDirLoc     = glGetUniformLocation(prog, "lightDir");
+    GLint lightColorLoc   = glGetUniformLocation(prog, "lightColor");
+    GLint ambientColorLoc = glGetUniformLocation(prog, "ambientColor");
+    GLint lightVPLoc      = glGetUniformLocation(prog, "lightVP");
+    GLint useShadowsLoc   = glGetUniformLocation(prog, "useShadows");
     glUniform3fv(lightDirLoc, 1, glm::value_ptr(lightDir));
     glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
     glUniform3fv(ambientColorLoc, 1, glm::value_ptr(ambientColor));
@@ -361,7 +294,7 @@ void Model3DComponent::LateUpdate(float dt)
         if (albedoTex != 0) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, albedoTex);
-            glUniform1i(glGetUniformLocation(shaderProgram, "ourTexture"), 0);
+            glUniform1i(glGetUniformLocation(prog, "ourTexture"), 0);
         }
         glBindVertexArray(mesh.VAO);
         glDrawElements(GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_INT, 0);
@@ -513,60 +446,17 @@ std::vector<Texture> Model3DComponent::loadMaterialTextures(aiMaterial* mat, aiT
     for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
         aiString str;
         mat->GetTexture(type, i, &str);
-        bool skip = false;
-        for (unsigned int j = 0; j < loadedTextures.size(); j++) {
-            if (std::strcmp(loadedTextures[j].path.data(), str.C_Str()) == 0) {
-                textures.push_back(loadedTextures[j]);
-                skip = true;
-                break;
-            }
-        }
-        if (!skip) {
-            Texture texture;
-            texture.id = TextureFromFile(str.C_Str(), directory);
-            texture.type = typeName;
-            texture.path = str.C_Str();
-            textures.push_back(texture);
-            loadedTextures.push_back(texture);
-        }
+        Texture texture;
+        texture.id   = TextureFromFile(str.C_Str(), directory);
+        texture.type = typeName;
+        texture.path = str.C_Str();
+        textures.push_back(texture);
     }
     return textures;
 }
 
 GLuint Model3DComponent::TextureFromFile(const char* path, const std::string& directory)
 {
-    std::string filename = std::string(path);
-    filename = directory + "/" + filename;
-
-    SDL_Surface* surface = IMG_Load(filename.c_str());
-    if (!surface) {
-        std::cerr << "Failed to load texture: " << IMG_GetError() << std::endl;
-        return 0;
-    }
-
-    SDL_Surface* converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
-    SDL_FreeSurface(surface);
-    if (!converted) {
-        std::cerr << "Failed to convert texture to RGBA32" << std::endl;
-        return 0;
-    }
-
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-
-    // Texture parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, converted->w, converted->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, converted->pixels);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    SDL_FreeSurface(converted);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    return textureID;
+    std::string filename = directory + "/" + std::string(path);
+    return ResourceManager::Get().LoadTexture(filename);
 }

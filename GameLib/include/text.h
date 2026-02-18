@@ -46,9 +46,6 @@ private:
     void initRenderData();    
 
    
-    static GLuint shaderProgram;
-    static GLuint loadShaderProgram();
-
 private:
     int fontSize;
     std::string text;

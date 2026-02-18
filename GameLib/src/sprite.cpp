@@ -1,12 +1,10 @@
 #include "sprite.h"
 #include "Renderer.h"
+#include "ResourceManager.h"
 #include <SDL_image.h>
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-GLuint Sprite::shaderProgram = 0;
-
 
 static const char* vertexShaderSource = R"(
 #version 330 core
@@ -39,39 +37,6 @@ void main()
 }
 )";
 
-static GLuint compileShader(GLenum type, const char* source) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, nullptr);
-    glCompileShader(shader);
-    GLint success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char infoLog[512];
-        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        std::cerr << "Shader compilation error: " << infoLog << std::endl;
-    }
-    return shader;
-}
-
-GLuint Sprite::loadShaderProgram() {
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
-
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vertexShader);
-    glAttachShader(program, fragmentShader);
-    glLinkProgram(program);
-    GLint success;
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success) {
-        char infoLog[512];
-        glGetProgramInfoLog(program, 512, nullptr, infoLog);
-        std::cerr << "Shader program link error: " << infoLog << std::endl;
-    }
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    return program;
-}
 
 Sprite::Sprite(const std::vector<unsigned char>& imageData)
     : textureID(0), VAO(0), VBO(0), EBO(0),
@@ -82,9 +47,6 @@ Sprite::Sprite(const std::vector<unsigned char>& imageData)
         std::cerr << "Failed to load sprite texture." << std::endl;
     }
     initRenderData();
-    if (shaderProgram == 0) {
-        shaderProgram = loadShaderProgram();
-    }
 }
 
 Sprite::~Sprite() {
@@ -174,7 +136,8 @@ void Sprite::draw(const Vector2& pos, float angle) {
     posY = static_cast<int>(pos.y);
     rotation = angle;
     //glDisable(GL_DEPTH_TEST);
-    glUseProgram(shaderProgram);
+    GLuint prog = ResourceManager::Get().GetOrCreateShader("sprite", vertexShaderSource, fragmentShaderSource);
+    glUseProgram(prog);
 
     // Build model matrix: translate, rotate around center, and scale
     glm::mat4 model = glm::mat4(1.0f);
@@ -188,19 +151,19 @@ void Sprite::draw(const Vector2& pos, float angle) {
     // Window assumed to be 800x480; adjust as needed.
     glm::mat4 projection = Renderer::Get().GetOrthoProjection();
     
-    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-    GLint projLoc  = glGetUniformLocation(shaderProgram, "projection");
+    GLint modelLoc = glGetUniformLocation(prog, "model");
+    GLint projLoc  = glGetUniformLocation(prog, "projection");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
     // Set sprite color and opacity
-    GLint colorLoc = glGetUniformLocation(shaderProgram, "spriteColor");
+    GLint colorLoc = glGetUniformLocation(prog, "spriteColor");
     glUniform4f(colorLoc, r, g, b, a);
 
     // Bind texture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureID);
-    GLint texLoc = glGetUniformLocation(shaderProgram, "spriteTexture");
+    GLint texLoc = glGetUniformLocation(prog, "spriteTexture");
     glUniform1i(texLoc, 0);
 
     // Draw quad

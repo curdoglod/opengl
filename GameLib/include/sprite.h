@@ -33,8 +33,7 @@ private:
     float rotation;
     float r, g, b, a;
 
-    static GLuint shaderProgram;
-    static GLuint loadShaderProgram();
+
 };
 
 #endif // SPRITE_H

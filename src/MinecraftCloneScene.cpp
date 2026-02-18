@@ -2,7 +2,7 @@
 
 void MinecraftCloneScene::Init()
 {
-    Vector2 windowSize(800, 480);
+    Vector2 windowSize(1280, 720);
     SetWindowSize(windowSize.x, windowSize.y);
     SDL_SetRelativeMouseMode(SDL_TRUE);
 

@@ -8,6 +8,7 @@
 #include "SceneManager.h"
 #include "Renderer.h"
 #include "InputManager.h"
+#include "ResourceManager.h"
 #include <chrono>
 #include <GL/glew.h>
 
@@ -205,6 +206,7 @@ void Engine::Quit()
 
 Engine::~Engine()
 {
+    ResourceManager::Get().ReleaseAll();
     SDL_DestroyWindow(impl->m_window);
     IMG_Quit();
     SDL_Quit();

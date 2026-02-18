@@ -56,14 +56,10 @@ private:
     std::vector<Texture> loadMaterialTextures(struct aiMaterial* mat, aiTextureType type, const std::string& typeName);
     GLuint TextureFromFile(const char* path, const std::string& directory);
 
-    static GLuint shaderProgram;
-    static GLuint loadShaderProgram();
 
-private:
     std::string modelPath;
-    std::string directory; 
+    std::string directory;
     std::vector<MeshEntry> meshes;
-    std::vector<Texture> loadedTextures;
 
     // Axis-aligned bounding box of the imported model in model space
     glm::vec3 aabbMin = glm::vec3( std::numeric_limits<float>::max());
