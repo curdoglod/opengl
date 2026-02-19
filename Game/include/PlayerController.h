@@ -11,6 +11,8 @@
 #include <cmath>
 #include <algorithm>
 
+class HotbarComponent;
+
 // ============================================================================
 // PlayerController — first-person camera controller (Minecraft-style).
 //
@@ -24,9 +26,12 @@
 //   • Simple gravity + ground collision via the world grid
 //   • Block place / destroy raycasting on mouse click
 // ============================================================================
-
 class PlayerController : public Component
 {
+	// Maximum number of ray steps when raycasting for block interaction.
+	// Reach = kRaycastSteps * blockSize * 0.4  (≈ 16 blocks with default settings)
+	static constexpr int kRaycastSteps = 40;
+
 public:
 	PlayerController()
 		: moveSpeed(120.0f / 35.0f), cameraObject(nullptr), eyeHeight(30.0f / 35.0f), yaw(0.0f), pitch(0.0f), mouseSensitivity(0.15f), velocityY(0.0f), gravity(-600.0f / 35.0f), isGrounded(false), jumpSpeed(220.0f / 35.0f)
@@ -50,210 +55,17 @@ public:
 		// It only needs a position in the world.
 	}
 
-	void Update(float dt) override
-	{
-		if (!object)
-			return;
-
-		auto &input = InputManager::Get();
-
-		// ---- Mouse look ----------------------------------------------------
-		Vector2 mouseDelta = input.GetMouseDelta();
-		yaw += mouseDelta.x * mouseSensitivity;
-		pitch += mouseDelta.y * mouseSensitivity;
-		pitch = std::max(-89.0f, std::min(89.0f, pitch));
-
-		Vector3 pos = object->GetPosition3D();
-		WorldGridComponent *grid = findGrid();
-
-		// ---- Push out of any block we are stuck inside ---------------------
-		if (grid)
-		{
-			pushOutOfBlocks(grid, pos);
-		}
-
-		// ---- Horizontal movement (WASD relative to yaw) --------------------
-		float vertical = (input.IsKeyDown(SDLK_w) ? 1.0f : 0.0f) + (input.IsKeyDown(SDLK_s) ? -1.0f : 0.0f);
-		float horizontal = (input.IsKeyDown(SDLK_d) ? 1.0f : 0.0f) + (input.IsKeyDown(SDLK_a) ? -1.0f : 0.0f);
-
-		if (vertical != 0.0f || horizontal != 0.0f)
-		{
-			const float toRad = 3.1415926535f / 180.0f;
-			float cy = cosf(yaw * toRad);
-			float sy = sinf(yaw * toRad);
-
-			Vector3 forward(sy, 0.0f, -cy);
-			Vector3 right(cy, 0.0f, sy);
-
-			Vector3 move(
-				forward.x * vertical + right.x * horizontal,
-				0.0f,
-				forward.z * vertical + right.z * horizontal);
-			float len = std::sqrt(move.x * move.x + move.z * move.z);
-			if (len > 0.0001f)
-			{
-				move.x /= len;
-				move.z /= len;
-
-				// Try X and Z movement separately so the player can slide
-				// along walls instead of getting stuck completely.
-				float dx = move.x * moveSpeed * dt;
-				float dz = move.z * moveSpeed * dt;
-
-				if (grid)
-				{
-					// Try moving along X
-					Vector3 testX(pos.x + dx, pos.y, pos.z);
-					if (!isCollidingHorizontally(grid, testX))
-					{
-						pos.x += dx;
-					}
-					// Try moving along Z
-					Vector3 testZ(pos.x, pos.y, pos.z + dz);
-					if (!isCollidingHorizontally(grid, testZ))
-					{
-						pos.z += dz;
-					}
-				}
-				else
-				{
-					pos.x += dx;
-					pos.z += dz;
-				}
-			}
-		}
-
-		// ---- Vertical movement (gravity + jump) ----------------------------
-		if (input.IsKeyDown(SDLK_SPACE) && isGrounded)
-		{
-			velocityY = jumpSpeed;
-			isGrounded = false;
-		}
-
-		velocityY += gravity * dt;
-		pos.y += velocityY * dt;
-
-		// ---- Ground / ceiling collision against the world grid --------------
-		if (grid)
-		{
-			float groundY = getGroundLevel(grid, pos);
-			if (pos.y <= groundY)
-			{
-				pos.y = groundY;
-				velocityY = 0.0f;
-				isGrounded = true;
-			}
-			else
-			{
-				isGrounded = false;
-			}
-			// Ceiling collision: if jumping into a block above, stop.
-			float headY = pos.y + eyeHeight;
-			int gx, gy, gz;
-			if (grid->WorldToGrid(Vector3(pos.x, headY, pos.z), gx, gy, gz))
-			{
-				if (grid->GetBlock(gx, gy, gz))
-				{
-					Vector3 blockWorld = grid->GridToWorld(gx, gy, gz);
-					float blockBottom = blockWorld.y - grid->GetBlockSize() * 0.5f;
-					pos.y = blockBottom - eyeHeight;
-					if (velocityY > 0.0f)
-						velocityY = 0.0f;
-				}
-			}
-		}
-
-		object->SetPosition(pos);
-
-		// ---- Sync camera to player eye position ----------------------------
-		if (cameraObject)
-		{
-			cameraObject->SetPosition(Vector3(pos.x, pos.y + eyeHeight, pos.z));
-			cameraObject->SetRotation(Vector3(pitch, yaw, 0.0f));
-		}
-
-		// ---- Highlight block under crosshair --------------------------------
-		updateHoveredBlock(grid);
-	}
+	void Update(float dt) override;
 
 	// --- Input events -------------------------------------------------------
 
-	void OnMouseButtonDown(Vector2 /*mouse_position*/) override
-	{
-		if (!object || !object->GetScene())
-			return;
-
-		auto &clickInput = InputManager::Get();
-		bool isLeftClick = clickInput.IsMouseButtonDown(SDL_BUTTON_LEFT);
-		bool isRightClick = clickInput.IsMouseButtonDown(SDL_BUTTON_RIGHT);
-
-		WorldGridComponent *grid = findGrid();
-		if (!grid)
-			return;
-
-		Vector3 rayStart = cameraObject ? cameraObject->GetPosition3D()
-										: object->GetPosition3D();
-		Vector3 rayDir = getLookDirection();
-		float stepSize = grid->GetBlockSize() * 0.4f;
-
-		if (isLeftClick)
-		{
-			// Destroy block
-			Vector3 currentPos = rayStart;
-			for (int i = 0; i < 40; ++i)
-			{
-				int gx, gy, gz;
-				if (grid->WorldToGrid(currentPos, gx, gy, gz))
-				{
-					Object* blk = grid->GetBlock(gx, gy, gz);
-					if (blk)
-					{
-						if (blk == hoveredBlock) hoveredBlock = nullptr;
-						grid->RemoveBlockAt(gx, gy, gz);
-						break;
-					}
-				}
-				currentPos = currentPos + rayDir * stepSize;
-			}
-		}
-		else if (isRightClick)
-		{
-			// Place block
-			Vector3 currentPos = rayStart;
-			Vector3 lastEmptyPos;
-			bool foundEmpty = false;
-			for (int i = 0; i < 40; ++i)
-			{
-				int gx, gy, gz;
-				if (grid->WorldToGrid(currentPos, gx, gy, gz))
-				{
-					if (grid->GetBlock(gx, gy, gz))
-					{
-						if (foundEmpty)
-						{
-							int lgx, lgy, lgz;
-							if (grid->WorldToGrid(lastEmptyPos, lgx, lgy, lgz))
-							{
-								grid->CreateBlockAt(lgx, lgy, lgz, BlockType::Grass);
-							}
-						}
-						break;
-					}
-					else
-					{
-						lastEmptyPos = currentPos;
-						foundEmpty = true;
-					}
-				}
-				currentPos = currentPos + rayDir * stepSize;
-			}
-		}
-	}
+	void OnMouseButtonDown(Vector2) override;
 
 	void OnMouseButtonMotion(Vector2 mouse_position) override
 	{
-
 	}
+
+	void SetHotbar(HotbarComponent *hb);
 
 private:
 	// --- Helpers ------------------------------------------------------------
@@ -270,16 +82,16 @@ private:
 	}
 
 	/// Raycast from camera and highlight the first block hit.
-	void updateHoveredBlock(WorldGridComponent* grid)
+	void updateHoveredBlock(WorldGridComponent *grid)
 	{
-		Object* newHovered = nullptr;
+		Object *newHovered = nullptr;
 		if (grid && cameraObject)
 		{
 			Vector3 rayStart = cameraObject->GetPosition3D();
-			Vector3 rayDir   = getLookDirection();
-			float stepSize   = grid->GetBlockSize() * 0.4f;
+			Vector3 rayDir = getLookDirection();
+			float stepSize = grid->GetBlockSize() * 0.4f;
 			Vector3 currentPos = rayStart;
-			for (int i = 0; i < 40; ++i)
+			for (int i = 0; i < kRaycastSteps; ++i)
 			{
 				int gx, gy, gz;
 				if (grid->WorldToGrid(currentPos, gx, gy, gz))
@@ -297,14 +109,16 @@ private:
 		{
 			if (hoveredBlock)
 			{
-				auto* m = hoveredBlock->GetComponent<Model3DComponent>();
-				if (m) m->SetHighlight(false);
+				auto *m = hoveredBlock->GetComponent<Model3DComponent>();
+				if (m)
+					m->SetHighlight(false);
 			}
 			hoveredBlock = newHovered;
 			if (hoveredBlock)
 			{
-				auto* m = hoveredBlock->GetComponent<Model3DComponent>();
-				if (m) m->SetHighlight(true);
+				auto *m = hoveredBlock->GetComponent<Model3DComponent>();
+				if (m)
+					m->SetHighlight(true);
 			}
 		}
 	}
@@ -466,4 +280,5 @@ private:
 	// Cached references
 	WorldGridComponent *cachedGrid = nullptr;
 	Object *hoveredBlock = nullptr;
+	HotbarComponent *hotbar = nullptr;
 };

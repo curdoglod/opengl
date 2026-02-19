@@ -53,7 +53,7 @@ public:
     // Highlight overlay — call SetHighlight(true) to tint, SetHighlight(false) to clear
     void SetHighlight(bool enabled,
                       glm::vec3 color     = glm::vec3(1.0f, 1.0f, 0.4f),
-                      float     intensity = 0.35f)
+                      float     intensity = 0.04f)
     {
         highlightTint = enabled ? glm::vec4(color, intensity) : glm::vec4(0.0f);
     }

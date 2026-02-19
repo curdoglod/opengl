@@ -1,6 +1,7 @@
 #pragma once
 #include "Scene.h"
 #include "components.h"
+#include "HotbarComponent.h"
 
 class MinecraftCloneScene : public Scene {
 public:
@@ -17,4 +18,6 @@ private:
     Object* lightObj;
     Object* world;
     WorldGridComponent* grid;
+    Object* hotbarObj; 
+    HotbarComponent* hotbar;
 };
