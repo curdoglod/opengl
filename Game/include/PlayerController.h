@@ -82,9 +82,19 @@ private:
 	}
 
 	/// Raycast from camera and highlight the first block hit.
-	void updateHoveredBlock(WorldGridComponent *grid)
+	/// Also caches hit coordinates so OnMouseButtonDown can reuse them.
+	void updateHoveredBlock(WorldGridComponent *grid, float dt)
 	{
+		// Throttle: only re-raycast every kHoverRayInterval seconds
+		hoverRayTimer += dt;
+		if (hoverRayTimer < kHoverRayInterval)
+			return;
+		hoverRayTimer = 0.0f;
+
 		Object *newHovered = nullptr;
+		rayHitValid = false;
+		rayHasEmpty = false;
+
 		if (grid && cameraObject)
 		{
 			Vector3 rayStart = cameraObject->GetPosition3D();
@@ -96,10 +106,19 @@ private:
 				int gx, gy, gz;
 				if (grid->WorldToGrid(currentPos, gx, gy, gz))
 				{
-					if (grid->GetBlock(gx, gy, gz))
+					Object *blk = grid->GetBlock(gx, gy, gz);
+					if (blk)
 					{
-						newHovered = grid->GetBlock(gx, gy, gz);
+						newHovered = blk;
+						rayHitValid = true;
+						rayHitGx = gx; rayHitGy = gy; rayHitGz = gz;
 						break;
+					}
+					else
+					{
+						// Remember last empty cell for block placement
+						rayHasEmpty = true;
+						rayEmptyGx = gx; rayEmptyGy = gy; rayEmptyGz = gz;
 					}
 				}
 				currentPos = currentPos + rayDir * stepSize;
@@ -281,4 +300,14 @@ private:
 	WorldGridComponent *cachedGrid = nullptr;
 	Object *hoveredBlock = nullptr;
 	HotbarComponent *hotbar = nullptr;
+
+	// Cached raycast results (reused by click handler)
+	bool rayHitValid = false;       // true if last raycast hit a block
+	int rayHitGx = 0, rayHitGy = 0, rayHitGz = 0;     // grid coords of hit block
+	bool rayHasEmpty = false;       // true if there's an empty cell before the hit
+	int rayEmptyGx = 0, rayEmptyGy = 0, rayEmptyGz = 0; // grid coords of last empty cell
+
+	// Throttle hover raycast so it doesn't run every single frame
+	float hoverRayTimer = 0.0f;
+	static constexpr float kHoverRayInterval = 0.03f; // ~33 Hz is enough for highlight
 };

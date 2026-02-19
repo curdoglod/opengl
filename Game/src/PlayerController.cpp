@@ -141,7 +141,7 @@ void PlayerController::Update(float dt)
     }
 
     // ---- Highlight block under crosshair --------------------------------
-    updateHoveredBlock(grid);
+    updateHoveredBlock(grid, dt);
 }
 
 void PlayerController::OnMouseButtonDown(Vector2)
@@ -157,62 +157,32 @@ void PlayerController::OnMouseButtonDown(Vector2)
     if (!grid)
         return;
 
-    Vector3 rayStart = cameraObject ? cameraObject->GetPosition3D()
-                                    : object->GetPosition3D();
-    Vector3 rayDir = getLookDirection();
-    float stepSize = grid->GetBlockSize() * 0.4f;
+    // Force an immediate raycast refresh so cached data is up-to-date
+    hoverRayTimer = kHoverRayInterval;
+    updateHoveredBlock(grid, 0.0f);
+
+    if (!rayHitValid)
+        return;
 
     if (isLeftClick)
     {
-        // Destroy block
-        Vector3 currentPos = rayStart;
-        for (int i = 0; i < kRaycastSteps; ++i)
+        // Destroy the block we are looking at (cached from raycast)
+        Object *blk = grid->GetBlock(rayHitGx, rayHitGy, rayHitGz);
+        if (blk)
         {
-            int gx, gy, gz;
-            if (grid->WorldToGrid(currentPos, gx, gy, gz))
-            {
-                Object *blk = grid->GetBlock(gx, gy, gz);
-                if (blk)
-                {
-                    if (blk == hoveredBlock)
-                        hoveredBlock = nullptr;
-                    grid->RemoveBlockAt(gx, gy, gz);
-                    break;
-                }
-            }
-            currentPos = currentPos + rayDir * stepSize;
+            if (blk == hoveredBlock)
+                hoveredBlock = nullptr;
+            grid->RemoveBlockAt(rayHitGx, rayHitGy, rayHitGz);
+            rayHitValid = false; // invalidate cache
         }
     }
     else if (isRightClick)
     {
-        // Place block
-        Vector3 currentPos = rayStart;
-        Vector3 lastEmptyPos;
-        bool foundEmpty = false;
-        for (int i = 0; i < kRaycastSteps; ++i)
+        // Place block in the last empty cell before the hit block
+        if (rayHasEmpty && hotbar)
         {
-            int gx, gy, gz;
-            if (grid->WorldToGrid(currentPos, gx, gy, gz))
-            {
-                if (grid->GetBlock(gx, gy, gz))
-                {
-                    if (foundEmpty)
-                    {
-                        int lgx, lgy, lgz;
-                        if (grid->WorldToGrid(lastEmptyPos, lgx, lgy, lgz))
-                        {
-                            grid->CreateBlockAt(lgx, lgy, lgz, hotbar->GetSelectedSlot());
-                        }
-                    }
-                    break;
-                }
-                else
-                {
-                    lastEmptyPos = currentPos;
-                    foundEmpty = true;
-                }
-            }
-            currentPos = currentPos + rayDir * stepSize;
+            grid->CreateBlockAt(rayEmptyGx, rayEmptyGy, rayEmptyGz, hotbar->GetSelectedSlot());
+            rayHitValid = false; // invalidate cache
         }
     }
 }
