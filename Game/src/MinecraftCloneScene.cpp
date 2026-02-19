@@ -19,7 +19,7 @@ void MinecraftCloneScene::Init()
     light->SetColor(glm::vec3(1.0f, 1.0f, 1.0f));
     light->SetAmbient(glm::vec3(0.25f, 0.25f, 0.25f));
     light->SetShadowEnabled(true);
-    light->SetShadowMapSize(2048, 2048);
+    light->SetShadowMapSize(4096, 4096);
     lightObj->AddComponent(light);
 
     // ---- World grid -------------------------------------------------------
@@ -43,14 +43,12 @@ void MinecraftCloneScene::Init()
 
     player->AddComponent(pc);
 
-    // ---- Crosshair (2D overlay) -------------------------------------------
     Object *crosshair = CreateObject();
     crosshair->SetPosition(Vector2(windowSize.x * 0.5f, windowSize.y * 0.5f));
     crosshair->SetLayer(1000);
     crosshair->AddComponent(new Image(Engine::GetResourcesArchive()->GetFile("ball.png")));
     crosshair->SetSize(Vector2(8, 8));
 
-    // ---- Hotbar UI (2D overlay) -------------------------------------------
     hotbarObj = CreateObject();
     hotbarObj->SetLayer(1000);
     hotbarObj->SetPosition(Vector2(windowSize.x * 0.5f,

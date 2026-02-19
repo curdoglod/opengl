@@ -30,7 +30,7 @@ class PlayerController : public Component
 {
 	// Maximum number of ray steps when raycasting for block interaction.
 	// Reach = kRaycastSteps * blockSize * 0.4  (≈ 16 blocks with default settings)
-	static constexpr int kRaycastSteps = 40;
+	static constexpr int kRaycastSteps = 20;
 
 public:
 	PlayerController()

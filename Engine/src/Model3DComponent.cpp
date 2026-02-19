@@ -74,20 +74,34 @@ float ShadowCalculation(vec4 lightSpacePos, vec3 normal, vec3 lightDirection)
     if (projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0)
         return 0.0;
 
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
     float currentDepth = projCoords.z;
 
-    float bias = max(0.005, 0.003 * (1.0 - max(dot(normalize(normal), -normalize(lightDirection)), 0.0)));
+    // Slope-scaled bias: small values to keep shadow close to geometry
+    float cosTheta = max(dot(normalize(normal), -normalize(lightDirection)), 0.0);
+    float bias = mix(0.002, 0.0004, cosTheta);
 
+    // 5x5 PCF for softer shadow edges
     float shadow = 0.0;
     vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-    for (int x = -1; x <= 1; ++x) {
-        for (int y = -1; y <= 1; ++y) {
+    int samples = 0;
+    for (int x = -2; x <= 2; ++x) {
+        for (int y = -2; y <= 2; ++y) {
             float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
             shadow += (currentDepth - bias) > pcfDepth ? 1.0 : 0.0;
+            samples++;
         }
     }
-    shadow /= 9.0;
+    shadow /= float(samples);
+
+    // Fade shadow near shadow-map borders to avoid hard cutoff
+    float fadeRange = 0.05;
+    float fadeFactor = 1.0;
+    fadeFactor *= smoothstep(0.0, fadeRange, projCoords.x);
+    fadeFactor *= smoothstep(0.0, fadeRange, 1.0 - projCoords.x);
+    fadeFactor *= smoothstep(0.0, fadeRange, projCoords.y);
+    fadeFactor *= smoothstep(0.0, fadeRange, 1.0 - projCoords.y);
+    shadow *= fadeFactor;
+
     return shadow;
 }
 
