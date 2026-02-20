@@ -167,13 +167,10 @@ void PlayerController::OnMouseButtonDown(Vector2)
     if (isLeftClick)
     {
         // Destroy the block we are looking at (cached from raycast)
-        Object *blk = grid->GetBlock(rayHitGx, rayHitGy, rayHitGz);
-        if (blk)
+        if (grid->HasBlock(rayHitGx, rayHitGy, rayHitGz))
         {
-            if (blk == hoveredBlock)
-                hoveredBlock = nullptr;
             grid->RemoveBlockAt(rayHitGx, rayHitGy, rayHitGz);
-            rayHitValid = false; // invalidate cache
+            rayHitValid = false;
         }
     }
     else if (isRightClick)

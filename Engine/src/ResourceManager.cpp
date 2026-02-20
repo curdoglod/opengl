@@ -2,6 +2,12 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <iostream>
+#include <algorithm>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/material.h>
+#include <glm/glm.hpp>
 
 ResourceManager& ResourceManager::Get() {
     static ResourceManager instance;
@@ -111,6 +117,120 @@ GLuint ResourceManager::compileProgram(const char* vertSrc, const char* fragSrc)
     return prog;
 }
 
+// ── Meshes ────────────────────────────────────────────────────────────────────
+
+static void processMeshIntoShared(aiMesh* mesh, const aiScene* scene, const std::string& directory, SharedMeshData& out) {
+    std::vector<float> vertices;
+    std::vector<unsigned int> indices;
+
+    bool hasTex    = mesh->HasTextureCoords(0);
+    bool hasNormals = mesh->HasNormals();
+
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+        // Position
+        float px = mesh->mVertices[i].x;
+        float py = mesh->mVertices[i].y;
+        float pz = mesh->mVertices[i].z;
+        vertices.push_back(px);
+        vertices.push_back(py);
+        vertices.push_back(pz);
+
+        // Update AABB
+        out.aabbMin.x = std::min(out.aabbMin.x, px);
+        out.aabbMin.y = std::min(out.aabbMin.y, py);
+        out.aabbMin.z = std::min(out.aabbMin.z, pz);
+        out.aabbMax.x = std::max(out.aabbMax.x, px);
+        out.aabbMax.y = std::max(out.aabbMax.y, py);
+        out.aabbMax.z = std::max(out.aabbMax.z, pz);
+
+        // Normal
+        if (hasNormals) {
+            vertices.push_back(mesh->mNormals[i].x);
+            vertices.push_back(mesh->mNormals[i].y);
+            vertices.push_back(mesh->mNormals[i].z);
+        } else {
+            vertices.push_back(0.0f); vertices.push_back(0.0f); vertices.push_back(1.0f);
+        }
+        // UV
+        if (hasTex) {
+            vertices.push_back(mesh->mTextureCoords[0][i].x);
+            vertices.push_back(mesh->mTextureCoords[0][i].y);
+        } else {
+            vertices.push_back(0.0f); vertices.push_back(0.0f);
+        }
+    }
+    for (unsigned int f = 0; f < mesh->mNumFaces; f++) {
+        for (unsigned int j = 0; j < mesh->mFaces[f].mNumIndices; j++)
+            indices.push_back(mesh->mFaces[f].mIndices[j]);
+    }
+
+    SharedMeshEntry entry;
+    glGenVertexArrays(1, &entry.VAO);
+    glGenBuffers(1, &entry.VBO);
+    glGenBuffers(1, &entry.EBO);
+
+    glBindVertexArray(entry.VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, entry.VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entry.EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+    int stride = 8 * sizeof(float);
+    // aPos (location 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+    glEnableVertexAttribArray(0);
+    // aTexCoord (location 1) — after pos(3) + normal(3)
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    // aNormal (location 2) — after pos(3)
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    glBindVertexArray(0);
+
+    entry.numIndices = (unsigned int)indices.size();
+
+    // Load diffuse texture from material
+    if (mesh->mMaterialIndex < scene->mNumMaterials) {
+        aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
+        if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+            aiString texPath;
+            mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
+            std::string fullPath = directory + "/" + std::string(texPath.C_Str());
+            entry.diffuseTexture = ResourceManager::Get().LoadTexture(fullPath);
+        }
+    }
+
+    out.meshes.push_back(entry);
+}
+
+static void processNodeIntoShared(aiNode* node, const aiScene* scene, const std::string& directory, SharedMeshData& out) {
+    for (unsigned int i = 0; i < node->mNumMeshes; i++)
+        processMeshIntoShared(scene->mMeshes[node->mMeshes[i]], scene, directory, out);
+    for (unsigned int i = 0; i < node->mNumChildren; i++)
+        processNodeIntoShared(node->mChildren[i], scene, directory, out);
+}
+
+const SharedMeshData* ResourceManager::GetOrLoadMesh(const std::string& path) {
+    auto it = m_meshCache.find(path);
+    if (it != m_meshCache.end()) return &it->second;
+
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(path,
+        aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs);
+
+    if (!scene || !scene->mRootNode || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
+        std::cerr << "ResourceManager: Assimp failed to load '" << path
+                  << "': " << importer.GetErrorString() << std::endl;
+        return nullptr;
+    }
+
+    SharedMeshData& data = m_meshCache[path];
+    std::string directory = path.substr(0, path.find_last_of('/'));
+    processNodeIntoShared(scene->mRootNode, scene, directory, data);
+    return &data;
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 void ResourceManager::ReleaseAll() {
@@ -121,4 +241,13 @@ void ResourceManager::ReleaseAll() {
     for (auto& [name, prog] : m_shaderCache)
         glDeleteProgram(prog);
     m_shaderCache.clear();
+
+    for (auto& [path, data] : m_meshCache) {
+        for (auto& mesh : data.meshes) {
+            glDeleteVertexArrays(1, &mesh.VAO);
+            glDeleteBuffers(1, &mesh.VBO);
+            glDeleteBuffers(1, &mesh.EBO);
+        }
+    }
+    m_meshCache.clear();
 }

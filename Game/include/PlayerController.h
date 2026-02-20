@@ -85,13 +85,12 @@ private:
 	/// Also caches hit coordinates so OnMouseButtonDown can reuse them.
 	void updateHoveredBlock(WorldGridComponent *grid, float dt)
 	{
-		// Throttle: only re-raycast every kHoverRayInterval seconds
 		hoverRayTimer += dt;
 		if (hoverRayTimer < kHoverRayInterval)
 			return;
 		hoverRayTimer = 0.0f;
 
-		Object *newHovered = nullptr;
+		bool newHit = false;
 		rayHitValid = false;
 		rayHasEmpty = false;
 
@@ -106,17 +105,15 @@ private:
 				int gx, gy, gz;
 				if (grid->WorldToGrid(currentPos, gx, gy, gz))
 				{
-					Object *blk = grid->GetBlock(gx, gy, gz);
-					if (blk)
+					if (grid->HasBlock(gx, gy, gz))
 					{
-						newHovered = blk;
+						newHit = true;
 						rayHitValid = true;
 						rayHitGx = gx; rayHitGy = gy; rayHitGz = gz;
 						break;
 					}
 					else
 					{
-						// Remember last empty cell for block placement
 						rayHasEmpty = true;
 						rayEmptyGx = gx; rayEmptyGy = gy; rayEmptyGz = gz;
 					}
@@ -124,22 +121,10 @@ private:
 				currentPos = currentPos + rayDir * stepSize;
 			}
 		}
-		if (newHovered != hoveredBlock)
-		{
-			if (hoveredBlock)
-			{
-				auto *m = hoveredBlock->GetComponent<Model3DComponent>();
-				if (m)
-					m->SetHighlight(false);
-			}
-			hoveredBlock = newHovered;
-			if (hoveredBlock)
-			{
-				auto *m = hoveredBlock->GetComponent<Model3DComponent>();
-				if (m)
-					m->SetHighlight(true);
-			}
-		}
+		if (newHit)
+			grid->SetHighlightBlock(rayHitGx, rayHitGy, rayHitGz);
+		else if (grid)
+			grid->ClearHighlight();
 	}
 
 	/// Find the WorldGridComponent in the scene (cached after first lookup).
@@ -298,7 +283,6 @@ private:
 
 	// Cached references
 	WorldGridComponent *cachedGrid = nullptr;
-	Object *hoveredBlock = nullptr;
 	HotbarComponent *hotbar = nullptr;
 
 	// Cached raycast results (reused by click handler)

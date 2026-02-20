@@ -2,9 +2,6 @@
 #include "object.h"
 #include "ResourceManager.h"
 #include "LightComponent.h"
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <SDL.h>
@@ -132,29 +129,26 @@ Model3DComponent::Model3DComponent(const std::string& modelPath)
 
 Model3DComponent::~Model3DComponent()
 {
-    // Delete all VAO/VBO/EBO for each mesh
-    for (auto& mesh : meshes) {
-        glDeleteVertexArrays(1, &mesh.VAO);
-        glDeleteBuffers(1, &mesh.VBO);
-        glDeleteBuffers(1, &mesh.EBO);
-    }
+    // Mesh geometry is owned by ResourceManager — nothing to delete here.
 }
 
-// ==================== Init: Load model + setup shader ====================
+// ==================== Init: Load model via shared ResourceManager cache ====================
 void Model3DComponent::Init()
 {
-    // Load model
-    if (!loadModel(modelPath)) {
+    sharedMesh = ResourceManager::Get().GetOrLoadMesh(modelPath);
+    if (!sharedMesh) {
         std::cerr << "Failed to load model: " << modelPath << std::endl;
+        return;
     }
-    // If object size not set by user, default to native Blender-imported dimensions
-    if (aabbComputed) {
-        if (object && object->GetSize3D().x == 0 && object->GetSize3D().y == 0 && object->GetSize3D().z == 0) {
-            if (modelDims == glm::vec3(0.0f)) {
-                modelDims = aabbMax - aabbMin;
-            }
-            object->SetSize(Vector3(modelDims.x, modelDims.y, modelDims.z));
-        }
+    // Copy AABB from shared data
+    aabbMin = sharedMesh->aabbMin;
+    aabbMax = sharedMesh->aabbMax;
+    aabbComputed = true;
+    modelDims = aabbMax - aabbMin;
+
+    // If the owning object has no size set, initialise it from the model's natural size
+    if (object && object->GetSize3D().x == 0 && object->GetSize3D().y == 0 && object->GetSize3D().z == 0) {
+        object->SetSize(Vector3(modelDims.x, modelDims.y, modelDims.z));
     }
 }
 
@@ -202,10 +196,11 @@ glm::mat4 Model3DComponent::ComputeModelMatrix() const
 
 void Model3DComponent::RenderDepthPass(const glm::mat4& model, GLuint depthProgram) const
 {
+    if (!sharedMesh) return;
     GLint modelLoc = glGetUniformLocation(depthProgram, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    for (const auto& mesh : meshes) {
+    for (const auto& mesh : sharedMesh->meshes) {
         glBindVertexArray(mesh.VAO);
         glDrawElements(GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
@@ -290,9 +285,10 @@ void Model3DComponent::Render(const glm::mat4& view, const glm::mat4& projection
     glUniform1i(useShadowsLoc, useShadows);
     glUniform4fv(glGetUniformLocation(prog, "highlightTint"), 1, glm::value_ptr(highlightTint));
 
-    // Bind albedo texture: prefer override if present, otherwise first mesh texture
-    for (auto& mesh : meshes) {
-        GLuint albedoTex = overrideAlbedoTexture ? overrideAlbedoTexture : (mesh.textures.empty() ? 0 : mesh.textures[0].id);
+    // Bind albedo texture and draw each mesh
+    if (!sharedMesh) { glUseProgram(0); return; }
+    for (const auto& mesh : sharedMesh->meshes) {
+        GLuint albedoTex = overrideAlbedoTexture ? overrideAlbedoTexture : mesh.diffuseTexture;
         if (albedoTex != 0) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, albedoTex);
@@ -303,159 +299,4 @@ void Model3DComponent::Render(const glm::mat4& view, const glm::mat4& projection
         glBindVertexArray(0);
     }
     glUseProgram(0);
-}
-
-// ==================== Load model via Assimp ====================
-bool Model3DComponent::loadModel(const std::string& path)
-{
-    Assimp::Importer importer;
-    // Use aiProcess_GenSmoothNormals instead of aiProcess_GenNormals
-    const aiScene* scene = importer.ReadFile(path,
-        aiProcess_Triangulate  |
-        aiProcess_GenSmoothNormals |
-        aiProcess_FlipUVs);
-
-    if (!scene || !scene->mRootNode || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
-        std::cerr << "Assimp error: " << importer.GetErrorString() << std::endl;
-        return false;
-    }
-
-    // Determine model directory (to find textures)
-    directory = path.substr(0, path.find_last_of('/'));
-
-    processNode(scene->mRootNode, scene);
-    // Cache native dimensions once loaded
-    if (aabbComputed) {
-        modelDims = aabbMax - aabbMin;
-    }
-    return true;
-}
-
-void Model3DComponent::processNode(aiNode* node, const aiScene* scene)
-{
-    for (unsigned int i = 0; i < node->mNumMeshes; i++) {
-        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        processMesh(mesh, scene);
-    }
-    for (unsigned int i = 0; i < node->mNumChildren; i++) {
-        processNode(node->mChildren[i], scene);
-    }
-}
-
-void Model3DComponent::processMesh(aiMesh* mesh, const aiScene* scene)
-{
-    std::vector<float> vertices;
-    std::vector<unsigned int> indices;
-
-    bool hasTexCoords = mesh->HasTextureCoords(0);
-    bool hasNormals   = mesh->HasNormals(); // Should be true since we use GenSmoothNormals
-
-    // Layout: (position x,y,z) + (normal x,y,z) + (UV x,y)
-    // Total 8 floats per vertex
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-        // Position
-        vertices.push_back(mesh->mVertices[i].x);
-        vertices.push_back(mesh->mVertices[i].y);
-        vertices.push_back(mesh->mVertices[i].z);
-
-        // Update AABB
-        aabbMin.x = std::min(aabbMin.x, mesh->mVertices[i].x);
-        aabbMin.y = std::min(aabbMin.y, mesh->mVertices[i].y);
-        aabbMin.z = std::min(aabbMin.z, mesh->mVertices[i].z);
-        aabbMax.x = std::max(aabbMax.x, mesh->mVertices[i].x);
-        aabbMax.y = std::max(aabbMax.y, mesh->mVertices[i].y);
-        aabbMax.z = std::max(aabbMax.z, mesh->mVertices[i].z);
-
-        // Normal (fallback to 0,0,1 if missing)
-        if (hasNormals) {
-            vertices.push_back(mesh->mNormals[i].x);
-            vertices.push_back(mesh->mNormals[i].y);
-            vertices.push_back(mesh->mNormals[i].z);
-        } else {
-            vertices.push_back(0.0f);
-            vertices.push_back(0.0f);
-            vertices.push_back(1.0f);
-        }
-
-        // UV
-        if (hasTexCoords) {
-            vertices.push_back(mesh->mTextureCoords[0][i].x);
-            vertices.push_back(mesh->mTextureCoords[0][i].y);
-        } else {
-            vertices.push_back(0.0f);
-            vertices.push_back(0.0f);
-        }
-    }
-
-    // Indices
-    for (unsigned int f = 0; f < mesh->mNumFaces; f++) {
-        aiFace face = mesh->mFaces[f];
-        for (unsigned int j = 0; j < face.mNumIndices; j++) {
-            indices.push_back(face.mIndices[j]);
-        }
-    }
-
-    MeshEntry entry;
-    glGenVertexArrays(1, &entry.VAO);
-    glGenBuffers(1, &entry.VBO);
-    glGenBuffers(1, &entry.EBO);
-
-    glBindVertexArray(entry.VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, entry.VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entry.EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-
-    // Total 8 floats per vertex: (pos.x,pos.y,pos.z, norm.x,norm.y,norm.z, uv.x,uv.y)
-    int stride = 8 * sizeof(float);
-
-    // layout(location=0) -> aPos (vec3)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // layout(location=2) -> aNormal (vec3), after first 3 floats (position)
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    // layout(location=1) -> aTexCoord (vec2), after 6 floats (pos+normal)
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindVertexArray(0);
-
-    entry.numIndices = static_cast<unsigned int>(indices.size());
-    
-    // Load diffuse textures (or baseColor if needed)
-    if (mesh->mMaterialIndex >= 0) {
-        aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-        std::vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
-        entry.textures.insert(entry.textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-    }
-
-    meshes.push_back(entry);
-
-    aabbComputed = true;
-}
-
-std::vector<Texture> Model3DComponent::loadMaterialTextures(aiMaterial* mat, aiTextureType type, const std::string& typeName)
-{
-    std::vector<Texture> textures;
-    for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
-        aiString str;
-        mat->GetTexture(type, i, &str);
-        Texture texture;
-        texture.id   = TextureFromFile(str.C_Str(), directory);
-        texture.type = typeName;
-        texture.path = str.C_Str();
-        textures.push_back(texture);
-    }
-    return textures;
-}
-
-GLuint Model3DComponent::TextureFromFile(const char* path, const std::string& directory)
-{
-    std::string filename = directory + "/" + std::string(path);
-    return ResourceManager::Get().LoadTexture(filename);
 }

@@ -9,6 +9,8 @@
 // ── Destructor ──────────────────────────────────────────────────────
 
 Scene::~Scene() {
+    // Flush any deferred deletes first (they are also in 'objects')
+    pendingDeletes.clear();
     for (auto* object : objects) {
         delete object;
     }
@@ -56,19 +58,26 @@ void Scene::UpdateEvents(SDL_Event event) {
 
 void Scene::UpdateScene(float deltaTime) {
     Update();
-    // Pass 1: Logic update
-    for (auto& object : objects) {
-        if (object->IsActive()) {
-            object->update(deltaTime);
+    // Pass 1: Logic update (skip static objects — they have no meaningful Update)
+    for (size_t i = 0; i < objects.size(); ++i) {
+        if (objects[i]->IsActive() && !objects[i]->IsStatic()) {
+            objects[i]->update(deltaTime);
         }
     }
+    flushPendingDeletes();
     // Pass 2: Collision callbacks
     dispatchCollisions();
-    // Pass 3: Late update (post-logic, NOT rendering — RenderSystem handles that)
-    for (auto& object : objects) {
-        if (object->IsActive()) {
-            object->lateUpdate(deltaTime);
+    // Pass 3: Late update
+    for (size_t i = 0; i < objects.size(); ++i) {
+        if (objects[i]->IsActive() && !objects[i]->IsStatic()) {
+            objects[i]->lateUpdate(deltaTime);
         }
+    }
+    flushPendingDeletes();
+    // Deferred layer sort — once per frame instead of per-object-creation
+    if (layerDirty) {
+        updateLayer();
+        layerDirty = false;
     }
 }
 
@@ -77,19 +86,28 @@ void Scene::UpdateScene(float deltaTime) {
 Object* Scene::CreateObject() {
     Object* object = new Object(this);
     objects.push_back(object);
-    updateLayer();
+    layerDirty = true;
     return object;
 }
 
 void Scene::DeleteObject(Object* object) {
-    for (auto it = objects.begin(); it != objects.end(); ++it) {
-        if (*it == object) {
+    if (!object) return;
+    // Defer: mark inactive and queue for removal after iteration.
+    object->SetActive(false);
+    pendingDeletes.push_back(object);
+}
+
+void Scene::flushPendingDeletes() {
+    if (pendingDeletes.empty()) return;
+    for (auto* obj : pendingDeletes) {
+        auto it = std::find(objects.begin(), objects.end(), obj);
+        if (it != objects.end()) {
             delete *it;
             objects.erase(it);
-            updateLayer();
-            break;
         }
     }
+    pendingDeletes.clear();
+    layerDirty = true;
 }
 
 Sprite* Scene::createSprite(const std::vector<unsigned char>& imageData) {
@@ -134,11 +152,16 @@ void Scene::dispatchCollisions()
 {
     // Gather all active objects that carry a BoxCollider3D
     std::vector<std::pair<Object*, BoxCollider3D*>> colliders;
+    colliders.reserve(64);
     for (auto* obj : objects) {
         if (!obj->IsActive()) continue;
+        if (obj->IsStatic()) continue;
         auto* col = obj->GetComponent<BoxCollider3D>();
         if (col) colliders.push_back({obj, col});
     }
+
+    // Early out — no colliders means nothing to check
+    if (colliders.size() < 2) return;
 
     // O(n^2) broad-phase – acceptable for small scenes
     for (size_t i = 0; i < colliders.size(); ++i) {

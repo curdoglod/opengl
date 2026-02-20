@@ -24,6 +24,7 @@ public:
 
     Object* CreateObject();
     void DeleteObject(Object* object);
+    void flushPendingDeletes();
 
     Sprite* createSprite(const std::vector<unsigned char>& imageData);
 
@@ -52,6 +53,8 @@ private:
 
 private: 
     std::vector<Object*> objects;
+    std::vector<Object*> pendingDeletes;
+    bool layerDirty = false;
     SDL_Window* m_window = nullptr;
     Engine* m_engine = nullptr;
 };

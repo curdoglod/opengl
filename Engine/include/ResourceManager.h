@@ -5,8 +5,28 @@
 #include <vector>
 #include <unordered_map>
 #include <GL/glew.h>
+#include <glm/glm.hpp>
 
 struct SDL_Surface;  // forward declaration — avoid pulling in all of SDL.h
+
+// ---------------------------------------------------------------------------
+// Shared mesh data — geometry owned by ResourceManager, shared across all
+// Model3DComponent instances that load the same file.  This avoids parsing
+// the FBX / OBJ with Assimp once per block in a voxel world.
+// ---------------------------------------------------------------------------
+struct SharedMeshEntry {
+    GLuint VAO        = 0;
+    GLuint VBO        = 0;
+    GLuint EBO        = 0;
+    unsigned int numIndices = 0;
+    GLuint diffuseTexture = 0; // material diffuse texture (0 = none)
+};
+
+struct SharedMeshData {
+    std::vector<SharedMeshEntry> meshes;
+    glm::vec3 aabbMin = glm::vec3( 1e9f);
+    glm::vec3 aabbMax = glm::vec3(-1e9f);
+};
 
 /// ResourceManager — central cache for GPU resources (textures + shaders).
 ///
@@ -24,6 +44,15 @@ public:
     // Non-copyable
     ResourceManager(const ResourceManager&) = delete;
     ResourceManager& operator=(const ResourceManager&) = delete;
+
+    // ── Textures ─────────────────────────────────────────────────────────────
+
+    // ── Meshes ───────────────────────────────────────────────────────────────
+
+    /// Load a 3-D model from a file path.  Returns shared (cached) geometry so
+    /// every component that uses the same file shares the same VAO/VBO/EBO.
+    /// Returns nullptr on failure.
+    const SharedMeshData* GetOrLoadMesh(const std::string& path);
 
     // ── Textures ─────────────────────────────────────────────────────────────
 
@@ -56,6 +85,7 @@ private:
 
     std::unordered_map<std::string, GLuint> m_textureCache;
     std::unordered_map<std::string, GLuint> m_shaderCache;
+    std::unordered_map<std::string, SharedMeshData> m_meshCache;
 };
 
 #endif // RESOURCE_MANAGER_H

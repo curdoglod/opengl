@@ -22,22 +22,27 @@ void MinecraftCloneScene::Init()
     light->SetShadowMapSize(4096, 4096);
     lightObj->AddComponent(light);
 
-    // ---- World grid -------------------------------------------------------
+    // ---- World grid (chunk-based, infinite) --------------------------------
     world = CreateObject();
     grid = new WorldGridComponent();
-    grid->SetSize(24, 24);
     grid->SetBlockSize(20.0f / 35.0f);
+    grid->SetRenderDistance(3);           // 3 chunks = 48 blocks each direction
+    grid->SetCameraObject(camObj);        // track the camera for chunk loading
+    grid->SetTerrainParams(3, 6, BlockType::Dirt, BlockType::Stone);
     world->AddComponent(grid);
-    grid->GenerateHillyTerrain(1, 1, BlockType::Dirt, BlockType::Stone);
+    // Force-generate spawn area so the player doesn't fall through unloaded terrain
+    grid->ForceGenerateArea(0, 0);
 
     // ---- Player (invisible body + first-person camera controller) ---------
     Object *player = CreateObject();
-    player->SetPosition(Vector3(0.0f, 60.0f / 35.0f, 0.0f));
+    // Compute safe spawn height from terrain at (0,0)
+    float spawnY = grid->GetSpawnHeight(0, 0);
+    player->SetPosition(Vector3(0.0f, spawnY, 0.0f));
     auto *pc = new PlayerController();
     pc->SetMoveSpeed(160.0f / 35.0f);
     pc->SetCamera(camObj);
     pc->SetEyeHeight(25.0f / 35.0f);
-    pc->SetGravity(-600.0f / 35.0f);
+   pc->SetGravity(-600.0f / 35.0f);
     pc->SetJumpSpeed(220.0f / 35.0f);
     pc->SetMouseSensitivity(0.20f);
 

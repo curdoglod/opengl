@@ -45,6 +45,8 @@ public:
     void UpdateEvents(SDL_Event& event);
     void SetActive(bool status);
     bool IsActive() const { return active; }
+    void SetStatic(bool s) { m_isStatic = s; }
+    bool IsStatic() const { return m_isStatic; }
     template <typename T>
     T* GetComponent() const {
         Component* comp = this->GetComponent(typeid(T));
@@ -68,6 +70,7 @@ private:
     Vector3 angle; 
     int layer;
     bool active; 
+    bool m_isStatic = false;
     float deltatime;
    
   

@@ -1,25 +1,11 @@
 #pragma once
 #include "component.h"
+#include "ResourceManager.h"
 #include <string>
 #include <vector>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
-#include <assimp/scene.h>
 #include <limits>
-
-struct Texture {
-    GLuint id;
-    std::string type;
-    std::string path;
-};
-
-struct MeshEntry {
-    GLuint VAO;
-    GLuint VBO;
-    GLuint EBO;
-    unsigned int numIndices;
-    std::vector<Texture> textures;
-};
 
 class Model3DComponent : public Component
 {
@@ -59,16 +45,9 @@ public:
     }
 
 private:
-    bool loadModel(const std::string& path);
-    void processNode(struct aiNode* node, const struct aiScene* scene);
-    void processMesh(struct aiMesh* mesh, const struct aiScene* scene);
-    std::vector<Texture> loadMaterialTextures(struct aiMaterial* mat, aiTextureType type, const std::string& typeName);
-    GLuint TextureFromFile(const char* path, const std::string& directory);
-
-
     std::string modelPath;
-    std::string directory;
-    std::vector<MeshEntry> meshes;
+    // Shared geometry from ResourceManager (parsed once, used by all instances)
+    const SharedMeshData* sharedMesh = nullptr;
 
     // Axis-aligned bounding box of the imported model in model space
     glm::vec3 aabbMin = glm::vec3( std::numeric_limits<float>::max());
@@ -83,4 +62,3 @@ private:
     // Highlight/tint overlay (rgb = color, a = mix factor)
     glm::vec4 highlightTint = glm::vec4(0.0f);
 };
-
