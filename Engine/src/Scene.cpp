@@ -28,12 +28,12 @@ void Scene::PreInit(Engine* engine, SDL_Window* window) {
 // ── Per-frame ───────────────────────────────────────────────────────
 
 void Scene::UpdateEvents(SDL_Event event) {
-    // Iterate over a snapshot so that handlers can safely
-    // create / delete objects without invalidating the loop.
-    auto snapshot = objects;
-    for (auto& object : snapshot) {
-        if (object->IsActive()) {
-            object->UpdateEvents(event);
+    // Iterate by index to avoid allocation and safely handle additions.
+    // Deletions are deferred, so the vector elements won't be removed here.
+    size_t count = objects.size();
+    for (size_t i = 0; i < count; ++i) {
+        if (objects[i]->IsActive()) {
+            objects[i]->UpdateEvents(event);
         }
     }
 

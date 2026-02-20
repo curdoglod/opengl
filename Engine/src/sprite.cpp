@@ -149,20 +149,32 @@ void Sprite::draw(const Vector2& pos, float angle) {
     // Window assumed to be 800x480; adjust as needed.
     glm::mat4 projection = Renderer::Get().GetOrthoProjection();
     
-    GLint modelLoc = glGetUniformLocation(prog, "model");
-    GLint projLoc  = glGetUniformLocation(prog, "projection");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    struct Uniforms {
+        GLint model, projection, spriteColor, spriteTexture;
+    };
+    static std::unordered_map<GLuint, Uniforms> uniformCache;
+    auto it = uniformCache.find(prog);
+    if (it == uniformCache.end()) {
+        Uniforms u;
+        u.model = glGetUniformLocation(prog, "model");
+        u.projection = glGetUniformLocation(prog, "projection");
+        u.spriteColor = glGetUniformLocation(prog, "spriteColor");
+        u.spriteTexture = glGetUniformLocation(prog, "spriteTexture");
+        uniformCache[prog] = u;
+        it = uniformCache.find(prog);
+    }
+    const Uniforms& u = it->second;
+
+    glUniformMatrix4fv(u.model, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(u.projection, 1, GL_FALSE, glm::value_ptr(projection));
 
     // Set sprite color and opacity
-    GLint colorLoc = glGetUniformLocation(prog, "spriteColor");
-    glUniform4f(colorLoc, r, g, b, a);
+    glUniform4f(u.spriteColor, r, g, b, a);
 
     // Bind texture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureID);
-    GLint texLoc = glGetUniformLocation(prog, "spriteTexture");
-    glUniform1i(texLoc, 0);
+    glUniform1i(u.spriteTexture, 0);
 
     // Draw quad
     glBindVertexArray(VAO);

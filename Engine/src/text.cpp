@@ -280,18 +280,30 @@ void TextComponent::Render()
     GLuint prog = ResourceManager::Get().GetOrCreateShader("text", vertexShaderSource, fragmentShaderSource);
     glUseProgram(prog);
 
-    GLint modelLoc = glGetUniformLocation(prog, "model");
-    GLint projLoc = glGetUniformLocation(prog, "projection");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    struct Uniforms {
+        GLint model, projection, textColor, textTexture;
+    };
+    static std::unordered_map<GLuint, Uniforms> uniformCache;
+    auto it = uniformCache.find(prog);
+    if (it == uniformCache.end()) {
+        Uniforms u;
+        u.model = glGetUniformLocation(prog, "model");
+        u.projection = glGetUniformLocation(prog, "projection");
+        u.textColor = glGetUniformLocation(prog, "textColor");
+        u.textTexture = glGetUniformLocation(prog, "textTexture");
+        uniformCache[prog] = u;
+        it = uniformCache.find(prog);
+    }
+    const Uniforms& u = it->second;
 
-    GLint colorLoc = glGetUniformLocation(prog, "textColor");
-    glUniform4f(colorLoc, color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
+    glUniformMatrix4fv(u.model, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(u.projection, 1, GL_FALSE, glm::value_ptr(projection));
+
+    glUniform4f(u.textColor, color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureID);
-    GLint texLoc = glGetUniformLocation(prog, "textTexture");
-    glUniform1i(texLoc, 0);
+    glUniform1i(u.textTexture, 0);
 
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

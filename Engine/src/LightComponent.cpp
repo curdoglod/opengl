@@ -5,6 +5,7 @@
 #include "Model3DComponent.h"
 #include "CameraComponent.h"
 #include "IVoxelRenderer.h"
+#include "Frustum.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
@@ -145,7 +146,15 @@ void LightComponent::RenderShadowMap(Scene* scene)
     glClear(GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(depthProgram);
-    GLint lightVPLoc = glGetUniformLocation(depthProgram, "lightVP");
+    static std::unordered_map<GLuint, GLint> depthLightVPLocCache;
+    GLint lightVPLoc;
+    auto it = depthLightVPLocCache.find(depthProgram);
+    if (it == depthLightVPLocCache.end()) {
+        lightVPLoc = glGetUniformLocation(depthProgram, "lightVP");
+        depthLightVPLocCache[depthProgram] = lightVPLoc;
+    } else {
+        lightVPLoc = it->second;
+    }
     glm::mat4 lightVP = GetLightVP();
     glUniformMatrix4fv(lightVPLoc, 1, GL_FALSE, glm::value_ptr(lightVP));
 
@@ -163,9 +172,11 @@ void LightComponent::RenderShadowMap(Scene* scene)
         modelComp->RenderDepthPass(model, depthProgram);
     }
 
-    // Batch-rendered voxel chunks
+    // Batch-rendered voxel chunks — frustum-culled against light ortho box
     if (IVoxelRenderer::s_instance) {
-        IVoxelRenderer::s_instance->RenderChunksDepth(depthProgram, lightVP, shadowCenter, shadowRangeSq);
+        Frustum lightFrustum;
+        lightFrustum.Extract(lightVP);
+        IVoxelRenderer::s_instance->RenderChunksDepth(depthProgram, lightVP, lightFrustum);
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

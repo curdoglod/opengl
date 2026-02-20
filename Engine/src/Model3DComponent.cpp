@@ -197,7 +197,17 @@ glm::mat4 Model3DComponent::ComputeModelMatrix() const
 void Model3DComponent::RenderDepthPass(const glm::mat4& model, GLuint depthProgram) const
 {
     if (!sharedMesh) return;
-    GLint modelLoc = glGetUniformLocation(depthProgram, "model");
+    
+    static std::unordered_map<GLuint, GLint> depthModelLocCache;
+    GLint modelLoc;
+    auto it = depthModelLocCache.find(depthProgram);
+    if (it == depthModelLocCache.end()) {
+        modelLoc = glGetUniformLocation(depthProgram, "model");
+        depthModelLocCache[depthProgram] = modelLoc;
+    } else {
+        modelLoc = it->second;
+    }
+    
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     for (const auto& mesh : sharedMesh->meshes) {
@@ -241,13 +251,34 @@ void Model3DComponent::Render(const glm::mat4& view, const glm::mat4& projection
     GLuint prog = ResourceManager::Get().GetOrCreateShader("model3d", vertexShaderSource, fragmentShaderSource);
     glUseProgram(prog);
 
+    struct Uniforms {
+        GLint model, view, proj, shadowMap, lightDir, lightColor, ambientColor, lightVP, useShadows, highlightTint, ourTexture;
+    };
+    static std::unordered_map<GLuint, Uniforms> uniformCache;
+    
+    auto it = uniformCache.find(prog);
+    if (it == uniformCache.end()) {
+        Uniforms u;
+        u.model = glGetUniformLocation(prog, "model");
+        u.view  = glGetUniformLocation(prog, "view");
+        u.proj  = glGetUniformLocation(prog, "projection");
+        u.shadowMap = glGetUniformLocation(prog, "shadowMap");
+        u.lightDir = glGetUniformLocation(prog, "lightDir");
+        u.lightColor = glGetUniformLocation(prog, "lightColor");
+        u.ambientColor = glGetUniformLocation(prog, "ambientColor");
+        u.lightVP = glGetUniformLocation(prog, "lightVP");
+        u.useShadows = glGetUniformLocation(prog, "useShadows");
+        u.highlightTint = glGetUniformLocation(prog, "highlightTint");
+        u.ourTexture = glGetUniformLocation(prog, "ourTexture");
+        uniformCache[prog] = u;
+        it = uniformCache.find(prog);
+    }
+    const Uniforms& u = it->second;
+
     // Upload matrices
-    GLint modelLoc = glGetUniformLocation(prog, "model");
-    GLint viewLoc  = glGetUniformLocation(prog, "view");
-    GLint projLoc  = glGetUniformLocation(prog, "projection");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniformMatrix4fv(viewLoc,  1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projLoc,  1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(u.model, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(u.view,  1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(u.proj,  1, GL_FALSE, glm::value_ptr(projection));
 
     // Lighting parameters
     glm::vec3 lightDir(0.0f, 0.0f, -1.0f);
@@ -271,19 +302,14 @@ void Model3DComponent::Render(const glm::mat4& view, const glm::mat4& projection
                        : getDummyShadowMap();
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, shadowTex);
-    glUniform1i(glGetUniformLocation(prog, "shadowMap"), 1);
+    glUniform1i(u.shadowMap, 1);
 
-    GLint lightDirLoc     = glGetUniformLocation(prog, "lightDir");
-    GLint lightColorLoc   = glGetUniformLocation(prog, "lightColor");
-    GLint ambientColorLoc = glGetUniformLocation(prog, "ambientColor");
-    GLint lightVPLoc      = glGetUniformLocation(prog, "lightVP");
-    GLint useShadowsLoc   = glGetUniformLocation(prog, "useShadows");
-    glUniform3fv(lightDirLoc, 1, glm::value_ptr(lightDir));
-    glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
-    glUniform3fv(ambientColorLoc, 1, glm::value_ptr(ambientColor));
-    glUniformMatrix4fv(lightVPLoc, 1, GL_FALSE, glm::value_ptr(lightVP));
-    glUniform1i(useShadowsLoc, useShadows);
-    glUniform4fv(glGetUniformLocation(prog, "highlightTint"), 1, glm::value_ptr(highlightTint));
+    glUniform3fv(u.lightDir, 1, glm::value_ptr(lightDir));
+    glUniform3fv(u.lightColor, 1, glm::value_ptr(lightColor));
+    glUniform3fv(u.ambientColor, 1, glm::value_ptr(ambientColor));
+    glUniformMatrix4fv(u.lightVP, 1, GL_FALSE, glm::value_ptr(lightVP));
+    glUniform1i(u.useShadows, useShadows);
+    glUniform4fv(u.highlightTint, 1, glm::value_ptr(highlightTint));
 
     // Bind albedo texture and draw each mesh
     if (!sharedMesh) { glUseProgram(0); return; }
@@ -292,7 +318,7 @@ void Model3DComponent::Render(const glm::mat4& view, const glm::mat4& projection
         if (albedoTex != 0) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, albedoTex);
-            glUniform1i(glGetUniformLocation(prog, "ourTexture"), 0);
+            glUniform1i(u.ourTexture, 0);
         }
         glBindVertexArray(mesh.VAO);
         glDrawElements(GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_INT, 0);
