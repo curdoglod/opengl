@@ -163,12 +163,33 @@ void Scene::dispatchCollisions()
     // Early out — no colliders means nothing to check
     if (colliders.size() < 2) return;
 
-    // O(n^2) broad-phase – acceptable for small scenes
+    // 1. Broad-phase: Sort and Sweep along the X-axis
+    // O(N log N)
+    std::sort(colliders.begin(), colliders.end(), [](const auto& a, const auto& b) {
+        float minXa = a.second->GetCenter().x - a.second->GetHalfExtents().x;
+        float minXb = b.second->GetCenter().x - b.second->GetHalfExtents().x;
+        return minXa < minXb;
+    });
+
+    // 2. Narrow-phase: Check overlaps only for objects that overlap on the X-axis
     for (size_t i = 0; i < colliders.size(); ++i) {
+        auto& [objA, colA] = colliders[i];
+        float maxXa = colA->GetCenter().x + colA->GetHalfExtents().x;
+
         for (size_t j = i + 1; j < colliders.size(); ++j) {
-            auto& [objA, colA] = colliders[i];
             auto& [objB, colB] = colliders[j];
+            float minXb = colB->GetCenter().x - colB->GetHalfExtents().x;
+
+            // If the minimum X of B is greater than the maximum X of A,
+            // they cannot overlap on the X-axis. Since the array is sorted by minX,
+            // no subsequent colliders can overlap with A either. We can break early!
+            if (minXb > maxXa) {
+                break;
+            }
+
+            // They overlap on the X-axis, so do a full 3D overlap check
             if (!colA->Overlaps(colB)) continue;
+
             bool trigger = colA->IsTrigger() || colB->IsTrigger();
             if (trigger) {
                 objA->notifyTriggerEnter(objB);

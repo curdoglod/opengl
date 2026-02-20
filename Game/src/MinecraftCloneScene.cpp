@@ -26,7 +26,7 @@ void MinecraftCloneScene::Init()
     world = CreateObject();
     grid = new WorldGridComponent();
     grid->SetBlockSize(20.0f / 35.0f);
-    grid->SetRenderDistance(3);           // 3 chunks = 48 blocks each direction
+    grid->SetRenderDistance(10);           // 3 chunks = 48 blocks each direction
     grid->SetCameraObject(camObj);        // track the camera for chunk loading
     grid->SetTerrainParams(3, 6, BlockType::Dirt, BlockType::Stone);
     world->AddComponent(grid);
